@@ -12,7 +12,7 @@ The system follows a **frontend-backend separation** with **integrated task sche
 
 ### Core Components
 1. **Management Backend (Django Admin UI)** - Configuration interface for apps, credentials, alert rules, and task scheduling
-2. **API Service (Django Web Server)** - Backend API handling configuration and data storage
+2. **Web Service (Django Web Server)** - Provides the web-based management UI (Django Admin)
 3. **Database (PostgreSQL)** - Stores app configs, encrypted credentials, alert rules, data records, and task schedules
 4. **Execution Module (Django Management Command)** - Worker process for data fetching and analysis
 5. **Task Scheduler (Built-in Django Scheduler)** - Integrated scheduling system with admin interface
@@ -206,7 +206,7 @@ The system implements a sophisticated analytics pipeline:
 
 ## Development Notes
 
-- The system processes data for "yesterday" by default (current date - 2 days to account for API data availability)
+- The system processes data with a configurable delay (default is 2 days) to account for API data availability. This can be set with the `DATA_FETCH_DELAY_DAYS` environment variable.
 - Apple App Store Connect uses JWT authentication with private key
 - Google Play Console uses service account JSON authentication
 - Download source breakdown includes 6 categories: App Store Search, Web Referrer, App Referrer, App Store Browse, Institutional, Other

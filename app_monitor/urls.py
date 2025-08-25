@@ -6,7 +6,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('monitoring.urls')),
 ]
 
 admin.site.site_header = "App数据监控管理后台"

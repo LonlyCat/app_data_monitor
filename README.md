@@ -80,6 +80,9 @@ DB_PORT=5432
 
 # 加密密钥 (用于敏感数据加密)
 ENCRYPTION_KEY=your-encryption-key-here
+
+# 数据拉取延迟天数 (默认为2, 用于等待API数据稳定)
+DATA_FETCH_DELAY_DAYS=2
 ```
 
 ### 3. 使用Docker启动

@@ -31,7 +31,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
     'monitoring',
 ]
 
@@ -106,16 +105,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# REST Framework settings
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-}
-
 # Logging configuration
 LOGGING = {
     'version': 1,
@@ -156,3 +145,8 @@ LOGGING = {
 
 # Encryption key for sensitive data
 ENCRYPTION_KEY = env('ENCRYPTION_KEY', default=None)
+
+# Number of days to wait for API data to be stable.
+# This delay accounts for the time it takes for Apple/Google to process and
+# finalize the data for a given day. The default of 2 is a safe value.
+DATA_FETCH_DELAY_DAYS = env.int('DATA_FETCH_DELAY_DAYS', default=2)
