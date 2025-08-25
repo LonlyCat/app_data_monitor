@@ -1,0 +1,25 @@
+# 开发环境依赖
+-r requirements.txt
+
+# 开发工具
+jupyter==1.0.0
+ipython==8.18.1
+django-extensions==3.2.3
+django-debug-toolbar==4.2.0
+
+# Google API客户端
+google-auth==2.23.4
+google-auth-oauthlib==1.1.0
+google-auth-httplib2==0.1.1
+google-api-python-client==2.108.0
+
+# JWT处理 (Apple API)
+PyJWT[crypto]==2.8.0
+
+# Web服务器
+gunicorn==21.2.0
+
+# 测试
+pytest==7.4.3
+pytest-django==4.7.0
+factory-boy==3.3.0

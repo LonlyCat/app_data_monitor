@@ -1,0 +1,317 @@
+{
+    "data": [
+        {
+            "type": "analyticsReports",
+            "id": "r3-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Downloads Standard",
+                "category": "COMMERCE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r3-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r3-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r3-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r4-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Downloads Detailed",
+                "category": "COMMERCE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r4-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r4-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r4-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r6-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Store Installation and Deletion Standard",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r6-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r6-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r6-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r7-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Store Installation and Deletion Detailed",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r7-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r7-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r7-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r8-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Sessions Standard",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r8-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r8-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r8-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r9-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Sessions Detailed",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r9-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r9-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r9-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r10-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Store Pre-Orders Standard",
+                "category": "COMMERCE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r10-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r10-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r10-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r11-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Store Pre-Orders Detailed",
+                "category": "COMMERCE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r11-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r11-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r11-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r12-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Store Purchases Standard",
+                "category": "COMMERCE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r12-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r12-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r12-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r13-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Store Purchases Detailed",
+                "category": "COMMERCE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r13-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r13-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r13-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r0-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Clip Usage Standard",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r0-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r0-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r0-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r1-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Clip Usage Detailed",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r1-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r1-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r1-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r2-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Crashes",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r2-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r2-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r2-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r194-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "Platform App Installs",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r194-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r194-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r194-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r189-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "App Opt In",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r189-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r189-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r189-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        },
+        {
+            "type": "analyticsReports",
+            "id": "r84-c141c0af-3267-4039-bdad-31d381872bc2",
+            "attributes": {
+                "name": "CarPlay App Usage",
+                "category": "APP_USAGE"
+            },
+            "relationships": {
+                "instances": {
+                    "links": {
+                        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r84-c141c0af-3267-4039-bdad-31d381872bc2/relationships/instances",
+                        "related": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r84-c141c0af-3267-4039-bdad-31d381872bc2/instances"
+                    }
+                }
+            },
+            "links": {
+                "self": "https://api.appstoreconnect.apple.com/v1/analyticsReports/r84-c141c0af-3267-4039-bdad-31d381872bc2"
+            }
+        }
+    ],
+    "links": {
+        "self": "https://api.appstoreconnect.apple.com/v1/analyticsReportRequests/c141c0af-3267-4039-bdad-31d381872bc2/reports?filter%5Bcategory%5D=APP_USAGE%2CCOMMERCE"
+    },
+    "meta": {
+        "paging": {
+            "total": 16,
+            "limit": 50
+        }
+    }
+}

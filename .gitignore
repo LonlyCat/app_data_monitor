@@ -1,0 +1,197 @@
+# =========================
+# OS generated files
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+.fseventsd
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# =========================
+# IDE / Editor settings
+# =========================
+.idea/
+.vscode/
+.vscode-*
+*.code-workspace
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.iml
+.project
+.classpath
+.settings/
+.metadata/
+.history/
+.vs/
+
+# =========================
+# Node / Frontend dependencies and outputs
+# =========================
+node_modules/
+bower_components/
+jspm_packages/
+yarn-error.log
+.pnp/
+.pnp.js
+.pnpm-store/
+.npm/
+.npmrc
+.cache/
+parcel-cache/
+.npm/_logs/
+
+# Common frontend build outputs
+build/
+dist/
+.tmp/
+.astro/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+coverage/
+
+# =========================
+# Python / Django
+# =========================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+pip-wheel-metadata/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Type checkers / linters
+.mypy_cache/
+.dmypy.json
+.dmypy/
+.pyre/
+.pytype/
+.ruff_cache/
+
+# Django specific
+*.log
+local_settings.py
+settings_local.py
+# SQLite database files
+*.sqlite3
+*.sqlite
+# Collected static and media (if generated locally)
+staticfiles/
+media/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# =========================
+# Compiled binaries and other artifacts
+# =========================
+*.exe
+*.dll
+*.so
+*.dylib
+*.la
+*.lo
+*.out
+*.obj
+*.o
+*.a
+*.pid
+*.seed
+*.orig
+
+# Logs
+*.log
+logs/
+*.err
+*.trace
+
+# =========================
+# Secrets / Environment
+# =========================
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.key
+*.pem
+*.p12
+*.crt
+*.csr
+secrets.*
+id_rsa
+id_dsa
+
+# Allow example env files
+!.env.example
+
+# =========================
+# Docker / Compose (local overrides)
+# =========================
+# Uncomment next line if you use a local override file
+# docker-compose.override.yml
+
+# =========================
+# Misc
+# =========================
+*.tmp
+*.temp
+*~
+# macOS Finder custom folder icon
+Icon?
