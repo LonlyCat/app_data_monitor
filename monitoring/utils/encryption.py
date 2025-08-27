@@ -1,4 +1,4 @@
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from django.conf import settings
 import base64
 import logging
@@ -7,49 +7,66 @@ logger = logging.getLogger(__name__)
 
 
 def get_encryption_key():
-    """获取加密密钥"""
-    key = getattr(settings, 'ENCRYPTION_KEY', None)
-    if not key:
-        raise ValueError("ENCRYPTION_KEY not set in settings")
+    """获取并验证加密密钥"""
+    key_str = getattr(settings, 'ENCRYPTION_KEY', None)
+    if not key_str:
+        raise ValueError(
+            "ENCRYPTION_KEY is not set in your environment variables or settings. "
+            "Please generate one using `python -c 'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'`"
+        )
     
-    # 如果密钥不是有效的Fernet密钥格式，则生成新的
     try:
-        if isinstance(key, str):
-            key = key.encode()
-        # 验证密钥格式
+        key = key_str.encode()
+        # The key must be a URL-safe base64-encoded 32-byte key.
+        # Fernet's constructor will validate this.
         Fernet(key)
         return key
-    except Exception:
-        logger.warning("Invalid ENCRYPTION_KEY format, generating new key")
-        return Fernet.generate_key()
+    except Exception as e:
+        logger.error(f"Invalid ENCRYPTION_KEY: {e}")
+        raise ValueError(
+            "The provided ENCRYPTION_KEY is invalid. It must be a URL-safe base64-encoded 32-byte key."
+        )
 
 
 def encrypt_data(data: str) -> str:
-    """加密数据"""
+    """Encrypts data using Fernet."""
     if not data:
         return ""
     
     try:
         key = get_encryption_key()
         f = Fernet(key)
-        encrypted_data = f.encrypt(data.encode())
-        return base64.b64encode(encrypted_data).decode()
+        encrypted_token = f.encrypt(data.encode())
+        # Fernet token is already bytes, just decode for storing in a text field.
+        return encrypted_token.decode()
     except Exception as e:
         logger.error(f"Failed to encrypt data: {e}")
         raise ValueError("Encryption failed")
 
 
 def decrypt_data(encrypted_data: str) -> str:
-    """解密数据"""
+    """
+    Decrypts data, handling both new (direct) and legacy (double-encoded) formats.
+    """
     if not encrypted_data:
         return ""
     
     try:
         key = get_encryption_key()
         f = Fernet(key)
-        decoded_data = base64.b64decode(encrypted_data.encode())
-        decrypted_data = f.decrypt(decoded_data)
-        return decrypted_data.decode()
+
+        # First, try to decrypt assuming the new, direct format.
+        try:
+            return f.decrypt(encrypted_data.encode()).decode()
+        except InvalidToken:
+            # If that fails, it might be the old, double-encoded format.
+            logger.debug("Direct decryption failed, trying legacy format (double base64).")
+            decoded_data = base64.b64decode(encrypted_data.encode())
+            return f.decrypt(decoded_data).decode()
+
     except Exception as e:
         logger.error(f"Failed to decrypt data: {e}")
-        raise ValueError("Decryption failed")
+        # Add more context to the error.
+        raise ValueError(
+            f"Decryption failed. The credential may be corrupted or the ENCRYPTION_KEY may have changed. Error: {e}"
+        )

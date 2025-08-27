@@ -124,45 +124,40 @@ class DataAnalyzer:
     def _get_historical_data(self, app_id: int, current_date: datetime) -> Dict[str, Optional[Dict]]:
         """获取历史对比数据"""
         try:
-            # 昨天的数据
-            yesterday = current_date - timedelta(days=1)
-            yesterday_record = DataRecord.objects.filter(
-                app_id=app_id, 
-                date=yesterday.date()
-            ).first()
-            
-            # 一周前的数据
-            last_week = current_date - timedelta(days=7)
-            last_week_record = DataRecord.objects.filter(
-                app_id=app_id, 
-                date=last_week.date()
-            ).first()
-            
+            yesterday_date = (current_date - timedelta(days=1)).date()
+            last_week_date = (current_date - timedelta(days=7)).date()
+
+            # Fetch both records in a single query
+            records = DataRecord.objects.filter(
+                app_id=app_id,
+                date__in=[yesterday_date, last_week_date]
+            )
+
+            # Create a dictionary for quick lookups
+            records_by_date = {record.date: record for record in records}
+
+            yesterday_record = records_by_date.get(yesterday_date)
+            last_week_record = records_by_date.get(last_week_date)
+
+            def record_to_dict(record: Optional[DataRecord]) -> Optional[Dict[str, Any]]:
+                if not record:
+                    return None
+                return {
+                    'downloads': record.downloads,
+                    'sessions': record.sessions,
+                    'deletions': record.deletions,
+                    'unique_devices': record.unique_devices,
+                    'downloads_app_store_search': record.downloads_app_store_search,
+                    'downloads_web_referrer': record.downloads_web_referrer,
+                    'downloads_app_referrer': record.downloads_app_referrer,
+                    'downloads_app_store_browse': record.downloads_app_store_browse,
+                    'downloads_institutional': record.downloads_institutional,
+                    'downloads_other': record.downloads_other,
+                }
+
             return {
-                'yesterday': {
-                    'downloads': yesterday_record.downloads,
-                    'sessions': yesterday_record.sessions,
-                    'deletions': yesterday_record.deletions,
-                    'unique_devices': yesterday_record.unique_devices,
-                    'downloads_app_store_search': yesterday_record.downloads_app_store_search,
-                    'downloads_web_referrer': yesterday_record.downloads_web_referrer,
-                    'downloads_app_referrer': yesterday_record.downloads_app_referrer,
-                    'downloads_app_store_browse': yesterday_record.downloads_app_store_browse,
-                    'downloads_institutional': yesterday_record.downloads_institutional,
-                    'downloads_other': yesterday_record.downloads_other
-                } if yesterday_record else None,
-                'last_week': {
-                    'downloads': last_week_record.downloads,
-                    'sessions': last_week_record.sessions,
-                    'deletions': last_week_record.deletions,
-                    'unique_devices': last_week_record.unique_devices,
-                    'downloads_app_store_search': last_week_record.downloads_app_store_search,
-                    'downloads_web_referrer': last_week_record.downloads_web_referrer,
-                    'downloads_app_referrer': last_week_record.downloads_app_referrer,
-                    'downloads_app_store_browse': last_week_record.downloads_app_store_browse,
-                    'downloads_institutional': last_week_record.downloads_institutional,
-                    'downloads_other': last_week_record.downloads_other
-                } if last_week_record else None
+                'yesterday': record_to_dict(yesterday_record),
+                'last_week': record_to_dict(last_week_record)
             }
             
         except Exception as e:
@@ -177,7 +172,7 @@ class DataAnalyzer:
         change = ((new_value - old_value) / old_value) * 100
         return round(change, 2)
     
-    def analyze_trend(self, app_id: int, days: int = 30, metric: str = 'downloads') -> Dict[str, Any]:
+    def analyze_trend(self, app_id: int, days: int = 30, metric: str = 'downloads', records_qs: Optional[QuerySet] = None) -> Dict[str, Any]:
         """
         分析趋势
         
@@ -185,27 +180,29 @@ class DataAnalyzer:
             app_id: App ID
             days: 分析天数
             metric: 指标名称 ('downloads', 'sessions', 'deletions', 'unique_devices')
+            records_qs: Optional pre-fetched QuerySet of DataRecord objects.
             
         Returns:
             趋势分析结果
         """
         try:
-            end_date = datetime.now().date()
-            start_date = end_date - timedelta(days=days)
+            if records_qs is None:
+                end_date = datetime.now().date()
+                start_date = end_date - timedelta(days=days)
+
+                # 获取历史数据
+                records_qs = DataRecord.objects.filter(
+                    app_id=app_id,
+                    date__gte=start_date,
+                    date__lte=end_date
+                ).order_by('date')
             
-            # 获取历史数据
-            records = DataRecord.objects.filter(
-                app_id=app_id,
-                date__gte=start_date,
-                date__lte=end_date
-            ).order_by('date')
-            
-            if not records:
+            if not records_qs:
                 return {'trend': 'insufficient_data', 'confidence': 0}
             
             # 转换为DataFrame进行分析
             data = []
-            for record in records:
+            for record in records_qs:
                 data.append({
                     'date': record.date,
                     'value': getattr(record, metric, 0)
@@ -306,16 +303,25 @@ class DataAnalyzer:
                 insights.append(f"📉 活跃设备数下降 {unique_devices_dod:.1f}%")
             elif unique_devices_dod > 10:
                 insights.append(f"📊 活跃设备数稳定增长 {unique_devices_dod:.1f}%")
+
+            # Fetch trend data once for the last 7 days
+            end_date = datetime.now().date()
+            start_date = end_date - timedelta(days=7)
+            trend_records = DataRecord.objects.filter(
+                app_id=app_id,
+                date__gte=start_date,
+                date__lte=end_date
+            ).order_by('date')
             
             # 趋势洞察
-            downloads_trend = self.analyze_trend(app_id, days=7, metric='downloads')
+            downloads_trend = self.analyze_trend(app_id, days=7, metric='downloads', records_qs=trend_records)
             if downloads_trend['trend'] == 'increasing' and downloads_trend['confidence'] > 70:
                 insights.append("📈 过去一周下载量呈持续上升趋势")
             elif downloads_trend['trend'] == 'decreasing' and downloads_trend['confidence'] > 70:
                 insights.append("📉 过去一周下载量呈持续下降趋势")
             
             # 卸载量趋势洞察
-            deletions_trend = self.analyze_trend(app_id, days=7, metric='deletions')
+            deletions_trend = self.analyze_trend(app_id, days=7, metric='deletions', records_qs=trend_records)
             if deletions_trend['trend'] == 'increasing' and deletions_trend['confidence'] > 70:
                 insights.append("⚠️ 过去一周卸载量持续上升，需要关注")
             elif deletions_trend['trend'] == 'decreasing' and deletions_trend['confidence'] > 70:

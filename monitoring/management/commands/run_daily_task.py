@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.conf import settings
 from django.utils import timezone
 from datetime import datetime, timedelta
 import traceback
@@ -49,8 +50,11 @@ class Command(BaseCommand):
                 )
                 return
         else:
-            # 默认获取昨天的数据
-            target_date = datetime.now() - timedelta(days=2)
+            # 默认获取N天前的数据，N由`DATA_FETCH_DELAY_DAYS`配置决定
+            # 这个延迟是为了确保Apple/Google的API数据已经完全生成并稳定
+            # 默认是2天，这是一个比较安全的值，可根据实际情况在.env中调整
+            delay_days = settings.DATA_FETCH_DELAY_DAYS
+            target_date = datetime.now() - timedelta(days=delay_days)
         
         self.stdout.write(
             self.style.SUCCESS(f'开始处理 {target_date.strftime("%Y-%m-%d")} 的数据')

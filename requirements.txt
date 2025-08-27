@@ -5,7 +5,6 @@ requests==2.31.0
 pandas==2.1.4
 cryptography==41.0.7
 PyJWT[crypto]==2.8.0
-djangorestframework==3.14.0
 google-auth==2.23.4
 google-auth-oauthlib==1.1.0
 google-auth-httplib2==0.1.1
