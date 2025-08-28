@@ -231,21 +231,39 @@ python manage.py generate_sample_data --app-id 1 --days 60
 
 ### 任务调度管理
 
+#### 方法一：后台守护进程（推荐）
+
 ```bash
-# 启动任务调度器 (守护进程模式)
-python manage.py manage_scheduler start --daemon
+# 启动任务调度器到后台
+./start_scheduler.sh
 
 # 停止任务调度器
-python manage.py manage_scheduler stop
+./stop_scheduler.sh
 
 # 查看调度器状态
-python manage.py manage_scheduler status
+./scheduler_status.sh
+
+# 查看实时日志
+tail -f logs/scheduler.log
+```
+
+#### 方法二：前台运行（调试用）
+
+```bash
+# 启动任务调度器 (前台模式，会占用终端)
+docker compose exec web python manage.py manage_scheduler start --daemon
+
+# 停止任务调度器
+docker compose exec web python manage.py manage_scheduler stop
+
+# 查看调度器状态
+docker compose exec web python manage.py manage_scheduler status
 
 # 测试调度器逻辑
-python manage.py manage_scheduler test
+docker compose exec web python manage.py manage_scheduler test
 
 # 测试特定调度
-python manage.py manage_scheduler test --test-schedule-id 1
+docker compose exec web python manage.py manage_scheduler test --test-schedule-id 1
 ```
 
 ### 手动执行任务
