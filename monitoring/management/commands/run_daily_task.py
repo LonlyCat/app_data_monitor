@@ -131,80 +131,116 @@ class Command(BaseCommand):
         self.stdout.write(f'  🔌 已连接到 {app.get_platform_display()} API')
         
         # 3. 获取数据
-        end_date = target_date
-        start_date = target_date
-        
         if app.platform == 'ios':
             # Apple Analytics 新实现支持指定目标日期参数，避免重复数据
             raw_data = client.get_analytics_data(app.bundle_id, target_date)
         else:
-            raw_data = client.get_statistics_data(app.bundle_id, start_date, end_date)
+            # Android: 报表按月生成且延迟较大，客户端会返回有效日期与日度映射
+            raw_data = client.get_statistics_data(app.bundle_id, target_date)
         
         if 'error' in raw_data:
             raise Exception(f'API数据获取失败: {raw_data["error"]}')
         
-        self.stdout.write(f'  📊 获取到数据 - 下载量: {raw_data["downloads"]}, 会话数: {raw_data["sessions"]}')
-
-        # 输出适配 AppStoreConnectClient 新增的数据与统计信息
-        if app.platform == 'ios':
-            # 输出详细统计信息（包含0值，便于观察数据变化）
-            updates = raw_data.get('updates', 0)
-            if isinstance(updates, (int, float)):
-                self.stdout.write(f'    🔄 更新数: {int(updates)}')
-                
-            reinstalls = raw_data.get('reinstalls', 0)  
-            if isinstance(reinstalls, (int, float)):
-                self.stdout.write(f'    🔁 重装数: {int(reinstalls)}')
-                
-            deletions = raw_data.get('deletions', 0)
-            if isinstance(deletions, (int, float)):
-                self.stdout.write(f'    🗑️ 删除数: {int(deletions)}')
-
-            unique_devices = raw_data.get('unique_devices')
-            if isinstance(unique_devices, (int, float)) and unique_devices > 0:
-                self.stdout.write(f'    📱 独立设备数: {int(unique_devices)}')
-
-            # 分报告的实例失败统计（若存在则输出，便于观测数据完整性）
-            detailed = raw_data.get('raw_data') if isinstance(raw_data.get('raw_data'), dict) else {}
-            if detailed:
-                install_proc = (detailed.get('install_report') or {}).get('processed_data') or {}
-                if install_proc:
-                    failed, total = install_proc.get('failed_instances', 0), install_proc.get('total_instances', 0)
-                    if failed:
-                        self.stdout.write(f'    ⚠️ 安装报告实例失败: {failed}/{total}')
-
-                session_proc = (detailed.get('session_report') or {}).get('processed_data') or {}
-                if session_proc:
-                    failed, total = session_proc.get('failed_instances', 0), session_proc.get('total_instances', 0)
-                    if failed:
-                        self.stdout.write(f'    ⚠️ 会话报告实例失败: {failed}/{total}')
+        # 输出数据与有效日期信息（Android特别关注effective_date）
+        eff = raw_data.get('effective_date')
+        if app.platform == 'android' and eff and eff != target_date.strftime('%Y-%m-%d'):
+            self.stdout.write(f'  📊 获取到数据 - 下载量: {raw_data["downloads"]}, 会话数: {raw_data["sessions"]}（实际日期: {eff}）')
+        else:
+            self.stdout.write(f'  📊 获取到数据 - 下载量: {raw_data["downloads"]}, 会话数: {raw_data["sessions"]}')
         
         # 4. 保存数据记录
         if not self.dry_run:
-            _, created = DataRecord.objects.update_or_create(
-                app=app,
-                date=target_date.date(),
-                defaults={
-                    'downloads': raw_data.get('downloads', 0),
-                    'sessions': raw_data.get('sessions', 0),
-                    'deletions': raw_data.get('deletions', 0),
-                    'unique_devices': raw_data.get('unique_devices'),
-                    'revenue': raw_data.get('revenue', 0),
-                    'rating': raw_data.get('rating'),
-                    # 下载来源细分数据
-                    'downloads_app_store_search': raw_data.get('downloads_app_store_search', 0),
-                    'downloads_web_referrer': raw_data.get('downloads_web_referrer', 0),
-                    'downloads_app_referrer': raw_data.get('downloads_app_referrer', 0),
-                    'downloads_app_store_browse': raw_data.get('downloads_app_store_browse', 0),
-                    'downloads_institutional': raw_data.get('downloads_institutional', 0),
-                    'downloads_other': raw_data.get('downloads_other', 0),
-                    'raw_data': raw_data
-                }
-            )
-            action = "创建" if created else "更新"
-            self.stdout.write(f'  💾 已{action}数据记录')
+            if app.platform == 'android':
+                # 缺口补齐：将本次 overview 中出现的、且尚未入库的最近一段日期（不晚于目标日期或最大可用日期）补齐
+                daily_map = raw_data.get('daily_map') or {}
+                if daily_map:
+                    # 仅考虑不晚于 max_available_date 的日期，避免未来空值
+                    max_date_str = raw_data.get('max_available_date')
+                    date_keys = sorted([d for d in daily_map.keys() if not max_date_str or d <= max_date_str])
+                    created_count = 0
+                    for d_str in date_keys:
+                        try:
+                            d_obj = datetime.strptime(d_str, '%Y-%m-%d').date()
+                        except Exception:
+                            continue
+                        # 若记录已存在则跳过
+                        if DataRecord.objects.filter(app=app, date=d_obj).exists():
+                            continue
+                        d_stats = daily_map[d_str]
+                        DataRecord.objects.update_or_create(
+                            app=app,
+                            date=d_obj,
+                            defaults={
+                                'downloads': int(d_stats.get('downloads', 0)),
+                                'sessions': 0,
+                                'deletions': int(d_stats.get('deletions', 0)),
+                                'unique_devices': None,
+                                'revenue': 0,
+                                'rating': None,
+                                'raw_data': {'source': 'gplay_overview', 'note': 'backfill from overview', 'blob_name': (raw_data.get('raw_response') or {}).get('blob_name')}
+                            }
+                        )
+                        created_count += 1
+                    if created_count:
+                        self.stdout.write(f'  💾 已补齐Android缺口记录 {created_count} 天')
+                # 仍然确保写入本次“有效日期”的匀质记录（若未被补齐循环覆盖）
+                eff_str = raw_data.get('effective_date')
+                record_date = target_date.date()
+                if eff_str:
+                    try:
+                        record_date = datetime.strptime(eff_str, '%Y-%m-%d').date()
+                    except Exception:
+                        record_date = target_date.date()
+                DataRecord.objects.update_or_create(
+                    app=app,
+                    date=record_date,
+                    defaults={
+                        'downloads': raw_data.get('downloads', 0),
+                        'sessions': raw_data.get('sessions', 0),
+                        'deletions': raw_data.get('deletions', 0),
+                        'unique_devices': raw_data.get('unique_devices'),
+                        'revenue': raw_data.get('revenue', 0),
+                        'rating': raw_data.get('rating'),
+                        'raw_data': raw_data
+                    }
+                )
+                self.stdout.write(f'  💾 已更新Android记录（记录日期: {record_date}）')
+            else:
+                # iOS 原有逻辑
+                _, created = DataRecord.objects.update_or_create(
+                    app=app,
+                    date=target_date.date(),
+                    defaults={
+                        'downloads': raw_data.get('downloads', 0),
+                        'sessions': raw_data.get('sessions', 0),
+                        'deletions': raw_data.get('deletions', 0),
+                        'unique_devices': raw_data.get('unique_devices'),
+                        'revenue': raw_data.get('revenue', 0),
+                        'rating': raw_data.get('rating'),
+                        # 下载来源细分数据
+                        'downloads_app_store_search': raw_data.get('downloads_app_store_search', 0),
+                        'downloads_web_referrer': raw_data.get('downloads_web_referrer', 0),
+                        'downloads_app_referrer': raw_data.get('downloads_app_referrer', 0),
+                        'downloads_app_store_browse': raw_data.get('downloads_app_store_browse', 0),
+                        'downloads_institutional': raw_data.get('downloads_institutional', 0),
+                        'downloads_other': raw_data.get('downloads_other', 0),
+                        'raw_data': raw_data
+                    }
+                )
+                action = "创建" if created else "更新"
+                self.stdout.write(f'  💾 已{action}数据记录')
         
         # 5. 数据分析
+        # 确定用于分析/展示的日期：iOS 用 target_date；Android 用 effective_date（若有）
+        data_date_for_analysis = target_date
+        if app.platform == 'android':
+            eff_str = raw_data.get('effective_date')
+            if eff_str:
+                try:
+                    data_date_for_analysis = datetime.strptime(eff_str, '%Y-%m-%d')
+                except Exception:
+                    data_date_for_analysis = target_date
+
         current_data = {
             'downloads': raw_data.get('downloads', 0),
             'sessions': raw_data.get('sessions', 0),
@@ -220,9 +256,14 @@ class Command(BaseCommand):
         }
         
         growth_rates = self.analyzer.calculate_growth_rates(
-            current_data, app.id, target_date
+            current_data, app.id, data_date_for_analysis
         )
         
+        # 标记哪些指标有效，传给通知层以便隐藏无数据指标
+        metric_availability = {
+            'sessions_available': bool(raw_data.get('sessions_available', True) if app.platform == 'ios' else raw_data.get('sessions_available', False))
+        }
+
         insights = self.analyzer.generate_insights(
             app.id, current_data, growth_rates
         )
@@ -260,8 +301,9 @@ class Command(BaseCommand):
                 report_config = DailyReportConfig.objects.get(app=app, is_active=True)
                 
                 report_data = self.analyzer.format_report_data(
-                    app.name, current_data, growth_rates, insights, target_date
+                    app.name, current_data, growth_rates, insights, data_date_for_analysis
                 )
+                report_data['metric_availability'] = metric_availability
                 
                 success = self.notifier.send_daily_report(
                     report_config.lark_webhook_daily, 

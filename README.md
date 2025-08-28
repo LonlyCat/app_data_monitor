@@ -141,6 +141,10 @@ docker-compose exec web python manage.py migrate
 2. 填入以下信息：
    - Service Account Email
    - Service Account Key (JSON格式)
+   - GCS Bucket Name（形如 `pubsite_prod_rev_*`，例如 `pubsite_prod_rev_11858034368235982812`）
+   - GCS Project ID（可选）
+
+说明：系统会使用上述 GCS 配置从 `stats/installs/installs_{package}_{YYYYMM}*overview.csv` 下载当月安装概览报表，并按每日提取 `Daily User Installs` 作为新增下载量，`Daily User Uninstalls` 作为卸载量。
 
 ### 3. 设置告警规则
 

@@ -103,21 +103,23 @@ class LarkNotifier:
             }
         })
         
-        # 会话数
-        sessions = metrics.get('sessions', {})
-        sessions_text = self._format_metric_text(
-            "📊 活跃会话",
-            sessions.get('value', 0),
-            sessions.get('dod_change', 0),
-            sessions.get('wow_change', 0)
-        )
-        metric_elements.append({
-            "tag": "div",
-            "text": {
-                "content": sessions_text,
-                "tag": "lark_md"
-            }
-        })
+        # 会话数（仅当可用时展示）
+        sessions_available = (report_data.get('metric_availability') or {}).get('sessions_available', True)
+        if sessions_available:
+            sessions = metrics.get('sessions', {})
+            sessions_text = self._format_metric_text(
+                "📊 活跃会话",
+                sessions.get('value', 0),
+                sessions.get('dod_change', 0),
+                sessions.get('wow_change', 0)
+            )
+            metric_elements.append({
+                "tag": "div",
+                "text": {
+                    "content": sessions_text,
+                    "tag": "lark_md"
+                }
+            })
         
         # 卸载量
         deletions = metrics.get('deletions', {})

@@ -9,6 +9,7 @@ from requests import PreparedRequest
 from functools import wraps
 import random
 import math
+from io import StringIO
 try:
     import numpy as np  # 用于数值清洗
 except Exception:  # pragma: no cover
@@ -1194,10 +1195,14 @@ class GooglePlayConsoleClient:
     
     BASE_URL = "https://www.googleapis.com/androidpublisher/v3"
     
-    def __init__(self, service_account_info: Dict[str, Any]):
+    def __init__(self, service_account_info: Dict[str, Any], bucket_name: Optional[str] = None, project_id: Optional[str] = None):
         self.service_account_info = service_account_info
         self._access_token = None
         self._token_expires = None
+        # GCS 相关配置
+        self._gcs_bucket_name = bucket_name
+        self._gcs_project_id = project_id
+        self._gcs_client = None
     
     def _get_access_token(self) -> str:
         """获取访问令牌"""
@@ -1224,6 +1229,25 @@ class GooglePlayConsoleClient:
         except Exception as e:
             logger.error(f"获取Google Play访问令牌失败: {e}")
             raise
+
+    def _get_gcs_client(self):
+        """获取或初始化 GCS 客户端"""
+        if self._gcs_client is not None:
+            return self._gcs_client
+        try:
+            # 使用只读存储权限
+            from google.oauth2 import service_account
+            from google.cloud import storage
+            credentials = service_account.Credentials.from_service_account_info(
+                self.service_account_info,
+                scopes=['https://www.googleapis.com/auth/devstorage.read_only']
+            )
+            self._gcs_client = storage.Client(credentials=credentials, project=self._gcs_project_id)
+            logger.info("已初始化Google Cloud Storage客户端")
+            return self._gcs_client
+        except Exception as e:
+            logger.error(f"初始化GCS客户端失败: {e}")
+            raise
     
     def _get_headers(self) -> Dict[str, str]:
         """获取请求头"""
@@ -1245,6 +1269,72 @@ class GooglePlayConsoleClient:
         except requests.exceptions.RequestException as e:
             logger.error(f"Google Play Console API请求失败: {e}")
             raise
+
+    def _find_overview_blob(self, package_name: str, target_date: datetime):
+        """在GCS中查找指定月份的 overview CSV blob"""
+        if not self._gcs_bucket_name:
+            raise Exception("缺少GCS Bucket名称配置(gcs_bucket_name)")
+        client = self._get_gcs_client()
+        bucket = client.bucket(self._gcs_bucket_name)
+
+        month_str = target_date.strftime('%Y%m')
+        prefix = f"stats/installs/installs_{package_name}_{month_str}"
+        logger.info(f"在GCS列举前缀: {prefix}")
+        try:
+            blobs = list(bucket.list_blobs(prefix=prefix))
+        except Exception as e:
+            logger.error(f"列举GCS对象失败: {e}")
+            raise
+
+        # 选择包含 overview 的CSV
+        overview_blobs = [b for b in blobs if b.name.endswith('_overview.csv')]
+        if not overview_blobs:
+            # 兼容大小写或其他后缀
+            overview_blobs = [b for b in blobs if 'overview' in b.name and b.name.endswith('.csv')]
+        if not overview_blobs:
+            names = [b.name for b in blobs]
+            raise Exception(f"未找到overview报表，可用对象: {names}")
+
+        # 一般只有一个，若多个则按更新日期取最新
+        overview_blobs.sort(key=lambda b: b.updated or datetime.min, reverse=True)
+        chosen = overview_blobs[0]
+        logger.info(f"选定overview报表: {chosen.name}")
+        return chosen
+
+    def _download_blob_text(self, blob) -> str:
+        """下载GCS对象并以文本返回，自动处理编码"""
+        try:
+            raw_bytes = blob.download_as_bytes()
+            # 优先尝试UTF-16（Play导出常见编码）
+            for enc in ['utf-16', 'utf-16le', 'utf-8-sig', 'utf-8', 'latin1']:
+                try:
+                    text = raw_bytes.decode(enc)
+                    logger.debug(f"CSV编码识别成功: {enc}")
+                    return text
+                except Exception:
+                    continue
+            # 最后兜底
+            text = raw_bytes.decode(errors='ignore')
+            logger.warning("CSV编码无法精确识别，已忽略错误进行解码")
+            return text
+        except Exception as e:
+            logger.error(f"下载overview CSV失败: {e}")
+            raise
+
+    def _parse_overview_csv(self, csv_text: str) -> Dict[str, Any]:
+        """解析overview CSV，返回DataFrame字典信息"""
+        try:
+            import pandas as pd
+            df = pd.read_csv(StringIO(csv_text))
+            logger.info(f"Google安装overview列名: {df.columns.tolist()}")
+            return {
+                'columns': df.columns.tolist(),
+                'row_count': len(df),
+                'raw_data': df.to_dict('records')
+            }
+        except Exception as e:
+            logger.error(f"解析overview CSV失败: {e}")
+            raise
     
     def get_app_info(self, package_name: str) -> Optional[Dict[str, Any]]:
         """获取应用信息"""
@@ -1257,39 +1347,99 @@ class GooglePlayConsoleClient:
             logger.error(f"获取Google Play应用信息失败 (Package: {package_name}): {e}")
             return None
     
-    def get_statistics_data(self, package_name: str, start_date: datetime, end_date: datetime) -> Dict[str, Any]:
-        """获取统计数据"""
+    def get_statistics_data(self, package_name: str, target_date: datetime) -> Dict[str, Any]:
+        """获取统计数据（改为从GCS下载overview CSV并解析每日新增下载量）"""
         try:
-            # Google Play Console的统计数据需要通过Google Play Developer API获取
-            
-            # 获取安装数据
-            installs_endpoint = f"applications/{package_name}/stats/installs"
-            params = {
-                'aggregationPeriod': 'DAILY',
-                'startTime.year': start_date.year,
-                'startTime.month': start_date.month,
-                'startTime.day': start_date.day,
-                'endTime.year': end_date.year,
-                'endTime.month': end_date.month,
-                'endTime.day': end_date.day
+            # 1) 定位 overview 报表对象
+            blob = self._find_overview_blob(package_name, target_date)
+            # 2) 下载并解析 CSV
+            csv_text = self._download_blob_text(blob)
+            parsed = self._parse_overview_csv(csv_text)
+    
+            # 3) 提取目标日期的数据行
+            rows = parsed.get('raw_data', [])
+            date_key = target_date.strftime('%Y-%m-%d')
+            downloads = 0
+            deletions = 0
+            matched_row = None
+            def _parse_int(val):
+                try:
+                    if val is None:
+                        return 0
+                    if isinstance(val, (int, float)):
+                        if math.isnan(val):
+                            return 0
+                        return int(val)
+                    if isinstance(val, str):
+                        s = val.replace(',', '').strip()
+                        if s == '':
+                            return 0
+                        return int(float(s))
+                    return 0
+                except Exception:
+                    return 0
+            # 构建按日期的日度映射，便于回退到最近可用日期
+            daily_map: Dict[str, Dict[str, int]] = {}
+            for row in rows:
+                # 兼容不同标题大小写或空格
+                row_date = row.get('Date') or row.get('date')
+                if isinstance(row_date, str):
+                    d_key = row_date.strip()
+                    # 日新增与卸载
+                    d_downloads = _parse_int(row.get('Daily User Installs') or row.get('Daily user installs') or row.get('daily user installs'))
+                    d_deletions = _parse_int(row.get('Daily User Uninstalls') or row.get('Daily user uninstalls') or row.get('daily user uninstalls'))
+                    daily_map[d_key] = {
+                        'downloads': d_downloads,
+                        'deletions': d_deletions,
+                    }
+                if isinstance(row_date, str) and row_date.strip() == date_key:
+                    matched_row = row
+                    break
+
+            if matched_row:
+                # 优先使用 Daily User Installs 作为新增下载量
+                downloads = _parse_int(matched_row.get('Daily User Installs') or matched_row.get('Daily user installs') or matched_row.get('daily user installs'))
+                # 卸载量（可用于监控）
+                deletions = _parse_int(matched_row.get('Daily User Uninstalls') or matched_row.get('Daily user uninstalls') or matched_row.get('daily user uninstalls'))
+                effective_date = date_key
+                logger.info(f"提取到 {effective_date} 的Google下载量: {downloads}，卸载量: {deletions}")
+            else:
+                # 回退到最近可用的日期（不晚于目标日期）
+                logger.warning(f"overview中未找到日期 {date_key} 的数据，尝试回退到最近可用日期")
+                # 找到 <= 目标日期的最近日期
+                available_dates = []
+                try:
+                    available_dates = sorted([
+                        d for d in daily_map.keys()
+                        if d <= date_key
+                    ])
+                except Exception:
+                    available_dates = sorted(list(daily_map.keys()))
+                if available_dates:
+                    effective_date = available_dates[-1]
+                    fallback = daily_map.get(effective_date, {})
+                    downloads = int(fallback.get('downloads', 0))
+                    deletions = int(fallback.get('deletions', 0))
+                    logger.info(f"使用最近可用日期 {effective_date} 的Google下载量: {downloads}，卸载量: {deletions}")
+                else:
+                    effective_date = None
+                    logger.warning("overview中没有任何可用日期数据")
+
+            # 4) 构建返回数据
+            return {
+                'downloads': downloads,
+                'sessions': 0,  # Google Play暂无会话数据
+                'sessions_available': False,
+                'deletions': deletions,
+                'effective_date': effective_date,
+                'available_dates': sorted(list(daily_map.keys())),
+                'daily_map': daily_map,
+                'max_available_date': max(daily_map.keys()) if daily_map else None,
+                'raw_response': {
+                    'blob_name': getattr(blob, 'name', None),
+                    'parsed_overview': parsed
+                }
             }
-            
-            response = self._make_request(installs_endpoint, params)
-            
-            # 解析数据
-            data = {
-                'downloads': 0,
-                'sessions': 0,  # Google Play没有直接的会话数据
-                'raw_response': response
-            }
-            
-            # 解析安装数据
-            if 'reports' in response:
-                for report in response['reports']:
-                    data['downloads'] += report.get('data', {}).get('installEvents', 0)
-            
-            return data
-            
         except Exception as e:
             logger.error(f"获取Google Play统计数据失败: {e}")
             return {'downloads': 0, 'sessions': 0, 'error': str(e)}
@@ -1312,4 +1462,7 @@ class APIClientFactory:
         """创建Google客户端"""
         import json
         service_account_info = json.loads(config_data['service_account_key'])
-        return GooglePlayConsoleClient(service_account_info)
+        # 可选从配置中获取 GCS bucket 与 project
+        bucket_name = config_data.get('gcs_bucket_name') or config_data.get('bucket_name')
+        project_id = config_data.get('gcs_project_id') or config_data.get('project_id')
+        return GooglePlayConsoleClient(service_account_info, bucket_name=bucket_name, project_id=project_id)

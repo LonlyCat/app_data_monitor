@@ -47,6 +47,20 @@ class CredentialAdminForm(forms.ModelForm):
         }),
         help_text='Google Play Console Service Account的JSON密钥'
     )
+    gcs_bucket_name = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': '例如: pubsite_prod_rev_11858034368235982812'
+        }),
+        help_text='Google Play Console 导出到 BigQuery/Cloud Storage 的专用 Bucket 名称（pubsite_prod_rev_*）'
+    )
+    gcs_project_id = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'placeholder': '例如: my-gcp-project-id'
+        }),
+        help_text='GCP 项目 ID（可选，用于显式指定 GCS 客户端项目）'
+    )
     
     class Meta:
         model = Credential
@@ -68,6 +82,8 @@ class CredentialAdminForm(forms.ModelForm):
                 # 不显示完整的密钥，只显示提示
                 if config_data.get('service_account_key'):
                     self.fields['service_account_key'].widget.attrs['placeholder'] = '已配置（重新提交以更新）'
+                self.fields['gcs_bucket_name'].initial = config_data.get('gcs_bucket_name', config_data.get('bucket_name', ''))
+                self.fields['gcs_project_id'].initial = config_data.get('gcs_project_id', config_data.get('project_id', ''))
     
     def clean(self):
         cleaned_data = super().clean()
@@ -106,6 +122,7 @@ class CredentialAdminForm(forms.ModelForm):
         """验证Android配置"""
         service_account_email = cleaned_data.get('service_account_email')
         service_account_key = cleaned_data.get('service_account_key')
+        gcs_bucket_name = cleaned_data.get('gcs_bucket_name')
         
         # 如果是新建或者有新的配置数据，则验证必填字段
         if not self.instance.pk or service_account_email or service_account_key:
@@ -119,6 +136,9 @@ class CredentialAdminForm(forms.ModelForm):
                 json.loads(service_account_key)
             except json.JSONDecodeError:
                 raise ValidationError({'service_account_key': 'Service Account密钥必须是有效的JSON格式'})
+        # GCS bucket 建议配置（用于统计数据拉取）；如果缺失，给出提示但不强制
+        if not gcs_bucket_name:
+            self.add_error('gcs_bucket_name', '建议配置 GCS Bucket 名称（pubsite_prod_rev_*），否则无法读取下载量overview报表')
     
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -136,6 +156,8 @@ class CredentialAdminForm(forms.ModelForm):
             config_data = {
                 'service_account_email': self.cleaned_data.get('service_account_email', ''),
                 'service_account_key': self.cleaned_data.get('service_account_key', ''),
+                'gcs_bucket_name': self.cleaned_data.get('gcs_bucket_name', ''),
+                'gcs_project_id': self.cleaned_data.get('gcs_project_id', ''),
             }
         
         # 只有在有新数据时才更新配置

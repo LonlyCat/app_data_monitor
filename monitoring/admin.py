@@ -49,7 +49,7 @@ class CredentialAdmin(admin.ModelAdmin):
             'description': '配置Apple App Store Connect API访问凭证'
         }),
         ('Google Play Console配置', {
-            'fields': ('service_account_email', 'service_account_key'),
+            'fields': ('service_account_email', 'service_account_key', 'gcs_bucket_name', 'gcs_project_id'),
             'classes': ('collapse', 'android-config'),
             'description': '配置Google Play Console API访问凭证'
         }),
