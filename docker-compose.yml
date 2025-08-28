@@ -23,12 +23,16 @@ services:
       - .:/app
     ports:
       - "8000:8000"
+    env_file:
+      - .env.docker
     environment:
       - DEBUG=True
+      - DB_ENGINE=django.db.backends.postgresql
       - DB_HOST=db
       - DB_NAME=app_monitor
       - DB_USER=postgres
       - DB_PASSWORD=postgres
+      - DB_PORT=5432
       - SECRET_KEY=django-insecure-development-key-only
     depends_on:
       db:

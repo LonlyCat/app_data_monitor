@@ -94,7 +94,8 @@ else
     echo "   ❌ Docker 未安装"
 fi
 
-if command -v docker-compose &> /dev/null; then
+# 检查Docker Compose（支持v1和v2）
+if command -v docker-compose &> /dev/null || docker compose version &> /dev/null; then
     echo "   ✅ Docker Compose 已安装"
 else
     echo "   ❌ Docker Compose 未安装"

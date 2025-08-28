@@ -9,8 +9,8 @@ if [ -f /.dockerenv ]; then
     # 在Docker容器内运行
     PYTHON_CMD="python"
 else
-    # 在宿主机运行，使用docker-compose
-    PYTHON_CMD="docker-compose exec web python"
+    # 在宿主机运行，使用docker compose
+    PYTHON_CMD="docker compose exec web python"
 fi
 
 echo "📊 运行Django内置应用迁移..."

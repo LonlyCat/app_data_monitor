@@ -85,13 +85,20 @@ ENCRYPTION_KEY=your-encryption-key-here
 DATA_FETCH_DELAY_DAYS=2
 ```
 
-### 3. 使用Docker启动
+### 3. 启动系统
 
+#### 开发环境（推荐用于开发调试）
 ```bash
-# 方法1: 使用启动脚本 (推荐)
-./start.sh
+# 使用SQLite数据库，无需安装PostgreSQL
+./start_dev.sh
+```
 
-# 方法2: 手动启动
+#### 生产环境（推荐用于生产部署）
+```bash
+# 使用Docker + PostgreSQL
+./start_prod.sh
+
+# 或手动启动
 docker-compose up -d
 sleep 15  # 等待数据库启动
 ./init_db.sh  # 初始化数据库
