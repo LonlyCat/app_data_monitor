@@ -54,9 +54,28 @@ python manage.py migrate
 echo "🔧 收集静态文件..."
 python manage.py collectstatic --noinput
 
-echo "👤 创建超级用户 (如果尚未创建)..."
-echo "请按提示输入管理员账号信息："
-python manage.py createsuperuser
+echo "👤 检查超级用户..."
+SUPERUSER_COUNT=$(python manage.py shell -c "from django.contrib.auth.models import User; print(User.objects.filter(is_superuser=True).count())" 2>/dev/null)
+
+if [ "$SUPERUSER_COUNT" -eq 0 ]; then
+    echo "👤 创建超级用户..."
+    python manage.py shell -c "
+from django.contrib.auth.models import User
+if not User.objects.filter(username='admin').exists():
+    User.objects.create_superuser('admin', 'admin@example.com', 'admin123')
+    print('超级用户创建成功: admin/admin123')
+else:
+    print('超级用户已存在')
+"
+else
+    echo "✅ 超级用户已存在"
+fi
+
+echo ""
+echo "🚀 启动开发服务器："
+echo "   python manage.py runserver"
+echo ""
+python manage.py runserver
 
 echo ""
 echo "🎉 系统启动完成！"
@@ -64,10 +83,6 @@ echo ""
 echo "📋 访问信息："
 echo "   管理后台: http://localhost:8000/admin"
 echo "   API健康检查: http://localhost:8000/api/health/"
-echo ""
-echo "🚀 启动开发服务器："
-echo "   python manage.py runserver"
-echo ""
 echo "🔧 常用命令："
 echo "   运行测试任务: python manage.py run_daily_task --dry-run"
 echo "   测试Webhook: python manage.py test_webhook --test-all"

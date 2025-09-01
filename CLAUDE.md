@@ -66,6 +66,30 @@ docker-compose exec web python manage.py createsuperuser
 docker exec app_data_monitor-web-1 python manage.py shell
 ```
 
+### Historical Data Initialization
+```bash
+# Initialize historical data for all active apps (default 30 days)
+python manage.py init_historical_data
+
+# Initialize for specific app
+python manage.py init_historical_data --app-id 1
+
+# Specify number of days (14 days, 30 days, etc.)
+python manage.py init_historical_data --days 14
+
+# Specify date range
+python manage.py init_historical_data --start-date 2025-01-01 --end-date 2025-01-31
+
+# Force overwrite existing data
+python manage.py init_historical_data --force
+
+# Dry run mode (no actual data saving)
+python manage.py init_historical_data --dry-run
+
+# Skip API call delays (for testing, not recommended for production)
+python manage.py init_historical_data --skip-api-delay
+```
+
 ### Data Collection and Processing
 ```bash
 # Run daily task (main data collection command)
@@ -203,6 +227,7 @@ The system implements a sophisticated analytics pipeline:
 - `monitoring/admin.py`: Django admin customizations and export functionality
 - `monitoring/management/commands/manage_scheduler.py`: Scheduler management command
 - `monitoring/management/commands/execute_task.py`: Manual task execution command
+- `monitoring/management/commands/init_historical_data.py`: Historical data initialization command
 
 ## Development Notes
 
@@ -215,3 +240,61 @@ The system implements a sophisticated analytics pipeline:
 - Task scheduling uses minute-level precision and supports daily, weekly, and monthly frequencies
 - Task execution history includes detailed logs, performance metrics, and retry capabilities
 - Built-in scheduler runs in a background thread and can be managed via Django admin or command line
+
+### Historical Data Initialization
+
+- **Purpose**: New Apps require historical data for meaningful day-over-day (DOD) and week-over-week (WOW) analysis
+- **Recommended timeframe**: 30 days provides sufficient data for trend analysis and anomaly detection
+- **Django Admin Integration**: Apps list shows data status and provides one-click initialization buttons
+- **Batch Operations**: Admin actions allow initializing multiple Apps simultaneously
+- **API Rate Limiting**: Built-in delays prevent API quota exhaustion during initialization
+- **Data Validation**: Existing records are preserved unless `--force` flag is used
+- **Progress Tracking**: Detailed logging shows success/failure counts for each App and date
+
+## Test and Lint Commands
+
+```bash
+# Running tests (if test files exist)
+python manage.py test
+
+# Database operations and validation
+python manage.py check
+python manage.py migrate --check
+
+# Code quality and validation
+python manage.py validate_templates  # Django built-in template validation
+
+# Production readiness check
+python manage.py check --deploy
+```
+
+## Build and Deployment Commands  
+
+```bash
+# Development environment setup
+./start_dev.sh  # Uses SQLite, no Docker required
+
+# Production environment setup  
+./start_prod.sh  # Uses Docker + PostgreSQL
+
+# Database reset and troubleshooting
+./quick_fix.sh  # Resets Docker volumes and database
+
+# Container management
+docker-compose up -d
+docker-compose down --volumes
+docker-compose logs -f web
+docker-compose exec web python manage.py shell
+```
+
+## Scheduler Management Scripts
+
+```bash
+# Background scheduler management (production)
+./start_scheduler.sh    # Start scheduler in background
+./stop_scheduler.sh     # Stop background scheduler  
+./scheduler_status.sh   # Check scheduler status and logs
+
+# Quick scheduler commands
+tail -f logs/scheduler.log  # View real-time scheduler logs
+```

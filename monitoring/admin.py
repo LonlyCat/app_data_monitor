@@ -14,7 +14,10 @@ import json
 
 @admin.register(App)
 class AppAdmin(admin.ModelAdmin):
-    list_display = ['name', 'platform', 'bundle_id', 'is_active', 'created_at']
+    list_display = [
+        'name', 'platform', 'bundle_id', 'is_active', 
+        'data_record_count', 'data_date_range', 'init_status', 'created_at'
+    ]
     list_filter = ['platform', 'is_active', 'created_at']
     search_fields = ['name', 'bundle_id']
     list_editable = ['is_active']
@@ -27,9 +30,198 @@ class AppAdmin(admin.ModelAdmin):
         ('状态', {
             'fields': ('is_active',)
         }),
+        ('历史数据', {
+            'fields': ('data_summary', 'init_historical_data_button'),
+            'classes': ('collapse',),
+            'description': '查看已有数据记录和初始化历史数据'
+        }),
     )
     
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = [
+        'created_at', 'updated_at', 'data_summary', 'init_historical_data_button'
+    ]
+    
+    actions = ['init_historical_data_30_days', 'init_historical_data_14_days']
+    
+    def data_record_count(self, obj):
+        """显示数据记录数量"""
+        count = obj.get_data_record_count()
+        if count > 0:
+            return format_html('<span style="color: green;">{} 条</span>', count)
+        return format_html('<span style="color: gray;">无数据</span>')
+    
+    data_record_count.short_description = '数据记录'
+    
+    def data_date_range(self, obj):
+        """显示数据日期范围"""
+        earliest = obj.get_earliest_data_date()
+        latest = obj.get_latest_data_date()
+        
+        if earliest and latest:
+            if earliest == latest:
+                return earliest.strftime('%Y-%m-%d')
+            return f"{earliest.strftime('%Y-%m-%d')} ~ {latest.strftime('%Y-%m-%d')}"
+        return "无数据"
+    
+    data_date_range.short_description = '数据范围'
+    
+    def init_status(self, obj):
+        """显示初始化状态"""
+        count = obj.get_data_record_count()
+        if count == 0:
+            return format_html('<span style="color: red;">需要初始化</span>')
+        elif count < 7:
+            return format_html('<span style="color: orange;">数据不足</span>')
+        else:
+            return format_html('<span style="color: green;">已就绪</span>')
+    
+    init_status.short_description = '初始化状态'
+    
+    def data_summary(self, obj):
+        """显示数据摘要"""
+        count = obj.get_data_record_count()
+        earliest = obj.get_earliest_data_date()
+        latest = obj.get_latest_data_date()
+        
+        if count == 0:
+            return "暂无历史数据记录。建议初始化历史数据以支持环比、同比分析。"
+        
+        summary = f"共 {count} 条数据记录"
+        if earliest and latest:
+            summary += f"，时间范围：{earliest} 至 {latest}"
+        
+        if count < 7:
+            summary += "。\n⚠️ 数据量较少，建议补充更多历史数据。"
+        else:
+            summary += "。\n✅ 数据充足，可进行环比和同比分析。"
+        
+        return summary
+    
+    data_summary.short_description = '数据摘要'
+    
+    def init_historical_data_button(self, obj):
+        """显示初始化历史数据按钮"""
+        if not obj or not obj.pk:
+            return "保存后可初始化"
+        
+        return format_html(
+            '<div style="margin: 10px 0;">'
+            '<a class="button" href="#" onclick="initHistoricalData({}, 30); return false;" '
+            'style="margin-right: 10px;">初始化30天历史数据</a>'
+            '<a class="button" href="#" onclick="initHistoricalData({}, 14); return false;" '
+            'style="margin-right: 10px;">初始化14天历史数据</a>'
+            '<a class="button" href="#" onclick="initHistoricalData({}, 7); return false;">'
+            '初始化7天历史数据</a>'
+            '</div>'
+            '<script>'
+            'function initHistoricalData(appId, days) {{'
+            '  if (!confirm("确定要初始化 " + days + " 天的历史数据吗？\\n\\n'
+            '这将调用API获取历史数据，可能需要几分钟时间。")) {{'
+            '    return;'
+            '  }}'
+            '  '
+            '  var form = document.createElement("form");'
+            '  form.method = "POST";'
+            '  form.action = "/admin/monitoring/app/" + appId + "/init_historical_data/";'
+            '  '
+            '  var csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;'
+            '  var csrfInput = document.createElement("input");'
+            '  csrfInput.type = "hidden";'
+            '  csrfInput.name = "csrfmiddlewaretoken";'
+            '  csrfInput.value = csrfToken;'
+            '  form.appendChild(csrfInput);'
+            '  '
+            '  var daysInput = document.createElement("input");'
+            '  daysInput.type = "hidden";'
+            '  daysInput.name = "days";'
+            '  daysInput.value = days;'
+            '  form.appendChild(daysInput);'
+            '  '
+            '  document.body.appendChild(form);'
+            '  form.submit();'
+            '}}'
+            '</script>',
+            obj.pk, obj.pk, obj.pk
+        )
+    
+    init_historical_data_button.short_description = '初始化历史数据'
+    
+    def init_historical_data_30_days(self, request, queryset):
+        """批量初始化30天历史数据"""
+        self._batch_init_historical_data(request, queryset, 30)
+    
+    init_historical_data_30_days.short_description = "初始化选中App的30天历史数据"
+    
+    def init_historical_data_14_days(self, request, queryset):
+        """批量初始化14天历史数据"""
+        self._batch_init_historical_data(request, queryset, 14)
+    
+    init_historical_data_14_days.short_description = "初始化选中App的14天历史数据"
+    
+    def _batch_init_historical_data(self, request, queryset, days):
+        """批量初始化历史数据的通用方法"""
+        success_count = 0
+        error_count = 0
+        messages = []
+        
+        for app in queryset:
+            try:
+                result = app.init_historical_data(days=days, skip_api_delay=True)
+                if result['success']:
+                    success_count += 1
+                    messages.append(f"✅ {app.name}: {result['message']}")
+                else:
+                    error_count += 1
+                    messages.append(f"❌ {app.name}: {result['message']}")
+            except Exception as e:
+                error_count += 1
+                messages.append(f"❌ {app.name}: 初始化失败 - {str(e)}")
+        
+        # 生成摘要消息
+        summary = f"批量初始化完成：成功 {success_count} 个，失败 {error_count} 个"
+        if success_count > 0:
+            self.message_user(request, summary, level='success' if error_count == 0 else 'warning')
+        else:
+            self.message_user(request, summary, level='error')
+        
+        # 如果需要详细信息，可以添加到消息中
+        if len(messages) <= 10:  # 只显示少量详细消息，避免界面过长
+            for msg in messages:
+                self.message_user(request, msg, level='info')
+    
+    def get_urls(self):
+        """添加自定义URL"""
+        urls = super().get_urls()
+        custom_urls = [
+            path(
+                '<int:pk>/init_historical_data/',
+                self.admin_site.admin_view(self.init_historical_data_view),
+                name='monitoring_app_init_historical_data'
+            ),
+        ]
+        return custom_urls + urls
+    
+    def init_historical_data_view(self, request, pk):
+        """处理单个App的历史数据初始化"""
+        from django.shortcuts import get_object_or_404, redirect
+        from django.contrib import messages
+        
+        app = get_object_or_404(App, pk=pk)
+        
+        if request.method == 'POST':
+            days = int(request.POST.get('days', 30))
+            
+            try:
+                result = app.init_historical_data(days=days, skip_api_delay=False)
+                if result['success']:
+                    messages.success(request, result['message'])
+                else:
+                    messages.error(request, result['message'])
+                    
+            except Exception as e:
+                messages.error(request, f"初始化失败: {str(e)}")
+        
+        return redirect('admin:monitoring_app_change', pk)
 
 
 @admin.register(Credential)

@@ -33,6 +33,62 @@ class App(models.Model):
     
     def __str__(self):
         return f"{self.name} ({self.get_platform_display()})"
+    
+    def init_historical_data(self, days=30, force=False, skip_api_delay=False):
+        """初始化历史数据的便捷方法"""
+        from datetime import date, timedelta
+        from django.core.management import call_command
+        from io import StringIO
+        import sys
+        
+        # 捕获命令输出
+        old_stdout = sys.stdout
+        sys.stdout = output = StringIO()
+        
+        try:
+            # 调用初始化历史数据命令
+            call_command(
+                'init_historical_data',
+                app_id=self.id,
+                days=days,
+                force=force,
+                skip_api_delay=skip_api_delay,
+                stdout=output,
+                stderr=output
+            )
+            
+            result = {
+                'success': True,
+                'message': f'成功初始化 {self.name} 的 {days} 天历史数据',
+                'output': output.getvalue()
+            }
+            
+        except Exception as e:
+            result = {
+                'success': False,
+                'message': f'初始化 {self.name} 历史数据失败: {str(e)}',
+                'error': str(e),
+                'output': output.getvalue()
+            }
+        
+        finally:
+            sys.stdout = old_stdout
+            
+        return result
+    
+    def get_data_record_count(self):
+        """获取已有数据记录数量"""
+        return self.datarecord_set.count()
+    
+    def get_latest_data_date(self):
+        """获取最新数据日期"""
+        latest_record = self.datarecord_set.order_by('-date').first()
+        return latest_record.date if latest_record else None
+    
+    def get_earliest_data_date(self):
+        """获取最早数据日期"""
+        earliest_record = self.datarecord_set.order_by('date').first()
+        return earliest_record.date if earliest_record else None
 
 
 class Credential(models.Model):

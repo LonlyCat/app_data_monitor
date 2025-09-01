@@ -218,6 +218,10 @@ class AppStoreConnectClient:
             logger.error(f"获取App信息失败 (Bundle ID: {bundle_id}): {e}")
             return None
     
+    def get_historical_data(self, app, target_date: datetime) -> Optional[Dict[str, Any]]:
+        """获取指定日期的历史数据，主要用于初始化历史数据"""
+        return self.get_analytics_data(app.bundle_id, target_date)
+    
     def get_analytics_data(self, bundle_id: str, target_date: Optional[datetime] = None) -> Dict[str, Any]:
         """
         获取Apple App Store Connect分析数据
@@ -1347,6 +1351,10 @@ class GooglePlayConsoleClient:
             logger.error(f"获取Google Play应用信息失败 (Package: {package_name}): {e}")
             return None
     
+    def get_historical_data(self, app, target_date: datetime) -> Optional[Dict[str, Any]]:
+        """获取指定日期的历史数据，主要用于初始化历史数据"""
+        return self.get_statistics_data(app.bundle_id, target_date)
+    
     def get_statistics_data(self, package_name: str, target_date: datetime) -> Dict[str, Any]:
         """获取统计数据（改为从GCS下载overview CSV并解析每日新增下载量）"""
         try:
@@ -1443,6 +1451,16 @@ class GooglePlayConsoleClient:
         except Exception as e:
             logger.error(f"获取Google Play统计数据失败: {e}")
             return {'downloads': 0, 'sessions': 0, 'error': str(e)}
+
+
+class AppleAppStoreClient(AppStoreConnectClient):
+    """Apple App Store客户端的别名，保持向后兼容"""
+    pass
+
+
+class GooglePlayClient(GooglePlayConsoleClient):
+    """Google Play客户端的别名，保持向后兼容"""
+    pass
 
 
 class APIClientFactory:
