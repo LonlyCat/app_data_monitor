@@ -25,7 +25,7 @@ done
 
 # 检查脚本文件
 echo "2️⃣ 检查脚本文件..."
-scripts=("start.sh" "init_db.sh" "quick_fix.sh")
+scripts=("start_dev.sh" "start_prod.sh" "quick_fix.sh")
 
 for script in "${scripts[@]}"; do
     if [ -f "$script" ] && [ -x "$script" ]; then
@@ -121,7 +121,8 @@ echo "   如果所有检查都通过 (✅)，系统应该可以正常启动"
 echo "   如果有警告 (⚠️) 或错误 (❌)，请根据提示进行修复"
 echo ""
 echo "🚀 启动命令:"
-echo "   ./start.sh    # 完整启动"
-echo "   ./quick_fix.sh # 遇到问题时使用"
+echo "   ./start_dev.sh  # 开发环境启动"
+echo "   ./start_prod.sh # 生产环境启动"
+echo "   ./quick_fix.sh  # 遇到问题时使用"
 echo ""
 echo "📚 更多信息请查看 README.md"

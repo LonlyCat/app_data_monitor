@@ -53,14 +53,11 @@ The system follows a **frontend-backend separation** with **integrated task sche
 
 ### Environment Setup
 ```bash
-# Start development environment
-./start.sh  # Recommended - handles Docker setup and DB initialization
+# Development environment setup
+./start_dev.sh  # Uses SQLite, no Docker required
 
-# Manual startup
-docker-compose up -d
-sleep 15
-./init_db.sh
-docker-compose exec web python manage.py createsuperuser
+# Production environment setup  
+./start_prod.sh  # Uses Docker + PostgreSQL
 
 # Access Django shell in container
 docker exec app_data_monitor-web-1 python manage.py shell
@@ -155,6 +152,11 @@ python manage.py collectstatic
 # Troubleshooting database issues
 ./quick_fix.sh  # Reset database and volumes
 
+# Clean up cache and temporary files
+find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+find . -name "*.pyc" -delete
+find . -name ".DS_Store" -delete
+
 # View logs
 docker-compose logs -f web
 ```
@@ -172,7 +174,7 @@ The system now includes an integrated task scheduling system that can be managed
 
 ### Legacy Cron Job Configuration (Optional)
 
-For backward compatibility, you can still use cron jobs. Reference `crontab.example`:
+For backward compatibility, you can still use cron jobs. Reference `doc/crontab.example`:
 
 ```bash
 # Daily data collection at 2 AM
@@ -250,6 +252,17 @@ The system implements a sophisticated analytics pipeline:
 - **API Rate Limiting**: Built-in delays prevent API quota exhaustion during initialization
 - **Data Validation**: Existing records are preserved unless `--force` flag is used
 - **Progress Tracking**: Detailed logging shows success/failure counts for each App and date
+
+## Documentation Organization
+
+All project documentation (except README.md) is organized in the `doc/` directory:
+
+- `doc/project_architecture.md`: System architecture and design patterns
+- `doc/QUICK_START.md`: Quick start guide for development setup
+- `doc/SCHEDULER_GUIDE.md`: Task scheduling configuration and management
+- `doc/crontab.example`: Example cron job configuration (legacy)
+
+**Rule**: When creating new documentation, always place it in the `doc/` directory. Keep only README.md in the project root.
 
 ## Test and Lint Commands
 

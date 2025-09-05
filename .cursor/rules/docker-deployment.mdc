@@ -1,0 +1,214 @@
+description:
+globs:
+alwaysApply: true
+---
+# Docker部署开发规范
+
+## 容器化架构
+
+### 服务组成
+- **Web应用**: Django应用服务
+- **数据库**: PostgreSQL数据库
+- **调度器**: 任务调度服务
+- **监控**: 日志和监控服务
+
+### 配置文件
+- [Dockerfile](mdc:Dockerfile) - 应用镜像构建
+- [docker-compose.yml](mdc:docker-compose.yml) - 服务编排配置
+- [start_dev.sh](mdc:start_dev.sh) - 开发环境启动脚本
+- [start_prod.sh](mdc:start_prod.sh) - 生产环境启动脚本
+
+## Dockerfile规范
+
+### 基础镜像选择
+- 使用官方Python镜像
+- 指定具体版本号
+- 多阶段构建优化
+- 安全基础镜像
+
+```dockerfile
+# 使用官方Python镜像
+FROM python:3.11-slim
+
+# 设置工作目录
+WORKDIR /app
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    gcc \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# 复制依赖文件
+COPY requirements.txt .
+
+# 安装Python依赖
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 复制应用代码
+COPY . .
+
+# 设置环境变量
+ENV PYTHONPATH=/app
+ENV DJANGO_SETTINGS_MODULE=app_monitor.settings
+
+# 暴露端口
+EXPOSE 8000
+
+# 启动命令
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+```
+
+## Docker Compose配置
+
+### 服务定义
+- 数据库服务配置
+- Web应用服务配置
+- 网络和存储配置
+- 健康检查配置
+
+```yaml
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: app_monitor
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  web:
+    build: .
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+```
+
+## 环境配置
+
+### 环境变量管理
+- 使用.env文件
+- 区分开发和生产环境
+- 敏感信息加密
+- 配置验证机制
+
+```bash
+# .env.docker 示例
+DEBUG=True
+SECRET_KEY=django-insecure-development-key-only
+DB_ENGINE=django.db.backends.postgresql
+DB_HOST=db
+DB_NAME=app_monitor
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_PORT=5432
+ENCRYPTION_KEY=your-encryption-key-here
+DATA_FETCH_DELAY_DAYS=2
+```
+
+### 启动脚本
+- 开发环境脚本
+- 生产环境脚本
+- 调度器启动脚本
+- 数据库初始化脚本
+
+```bash
+#!/bin/bash
+# start_dev.sh - 开发环境启动脚本
+
+echo "🚀 启动开发环境..."
+
+# 检查Docker是否运行
+if ! docker info > /dev/null 2>&1; then
+    echo "❌ Docker未运行，请先启动Docker"
+    exit 1
+fi
+
+# 构建并启动服务
+docker-compose up --build -d
+
+echo "✅ 开发环境启动完成"
+echo "📱 访问地址: http://localhost:8000"
+```
+
+## 部署最佳实践
+
+### 安全考虑
+- 最小化基础镜像
+- 非root用户运行
+- 安全扫描检查
+- 密钥管理
+
+### 性能优化
+- 多阶段构建
+- 镜像层缓存
+- 资源限制配置
+- 网络优化
+
+### 监控和日志
+- 日志收集配置
+- 健康检查机制
+- 性能监控
+- 错误追踪
+
+## 开发工作流
+
+### 本地开发
+```bash
+# 启动开发环境
+./start_dev.sh
+
+# 查看日志
+docker-compose logs -f web
+
+# 进入容器
+docker-compose exec web bash
+
+# 执行管理命令
+docker-compose exec web python manage.py migrate
+```
+
+### 生产部署
+```bash
+# 启动生产环境
+./start_prod.sh
+
+# 检查服务状态
+docker-compose ps
+
+# 更新应用
+docker-compose pull
+docker-compose up -d
+
+# 备份数据库
+docker-compose exec db pg_dump -U postgres app_monitor > backup.sql
+```
+
+## 故障排查
+
+### 常见问题
+- 数据库连接失败
+- 端口冲突
+- 权限问题
+- 资源不足
+
+### 调试工具
+- 容器日志查看
+- 容器内部调试
+- 网络连接测试
+- 性能分析工具

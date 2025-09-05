@@ -1,0 +1,114 @@
+description:
+globs:
+alwaysApply: true
+---
+# Django编码规范
+
+## 代码风格
+
+### 导入顺序
+1. Python标准库
+2. Django相关导入
+3. 第三方库
+4. 本地应用导入
+
+```python
+# 标准库
+from datetime import date, timedelta
+import json
+import logging
+
+# Django
+from django.core.management.base import BaseCommand, CommandError
+from django.utils import timezone
+from django.db import models
+
+# 第三方库
+import pandas as pd
+
+# 本地应用
+from monitoring.models import App, DataRecord
+from monitoring.utils.api_clients import AppleAppStoreClient
+```
+
+### 模型定义规范
+- 使用有意义的verbose_name
+- 添加适当的Meta类配置
+- 实现`__str__`方法
+- 使用choices字段时定义PLATFORM_CHOICES等常量
+
+```python
+class App(models.Model):
+    PLATFORM_CHOICES = [
+        ('ios', 'iOS'),
+        ('android', 'Android'),
+    ]
+    
+    name = models.CharField(max_length=200, verbose_name='App名称')
+    platform = models.CharField(
+        max_length=10, 
+        choices=PLATFORM_CHOICES, 
+        verbose_name='平台'
+    )
+    
+    class Meta:
+        verbose_name = 'App'
+        verbose_name_plural = 'Apps'
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.name} ({self.get_platform_display()})"
+```
+
+### 管理命令规范
+- 继承BaseCommand
+- 提供详细的help信息
+- 使用中文参数说明
+- 添加适当的参数验证
+- 使用self.stdout.write输出信息
+
+```python
+class Command(BaseCommand):
+    help = '初始化App历史数据 (默认30天)'
+
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--app-id',
+            type=int,
+            help='指定App ID，不指定则初始化所有活跃App'
+        )
+    
+    def handle(self, *args, **options):
+        self.stdout.write(
+            self.style.SUCCESS('🚀 开始初始化历史数据...')
+        )
+```
+
+### 异常处理
+- 使用具体的异常类型
+- 提供有意义的错误信息
+- 记录详细的日志信息
+
+```python
+try:
+    # 业务逻辑
+    pass
+except App.DoesNotExist:
+    raise CommandError(f"未找到ID为 {app_id} 的活跃App")
+except Exception as e:
+    logger.error(f"处理失败: {str(e)}", exc_info=True)
+    raise CommandError(f"处理失败: {str(e)}")
+```
+
+### 日志记录
+- 使用中文日志消息
+- 选择合适的日志级别
+- 包含足够的上下文信息
+
+```python
+logger = logging.getLogger(__name__)
+
+logger.info(f"开始处理App: {app.name}")
+logger.warning(f"数据获取延迟: {delay_seconds}秒")
+logger.error(f"API调用失败: {error_message}", exc_info=True)
+```

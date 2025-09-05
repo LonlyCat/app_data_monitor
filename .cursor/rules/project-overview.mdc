@@ -1,0 +1,46 @@
+description:
+globs:
+alwaysApply: true
+---
+# App数据监控与分析平台
+
+这是一个基于Django的App数据监控系统，支持从Apple App Store Connect和Google Play Console自动采集数据，进行智能分析和异常告警。
+
+## 项目结构
+
+- **主应用**: [monitoring/](mdc:monitoring/) - 核心监控功能模块
+- **管理命令**: [monitoring/management/commands/](mdc:monitoring/management/commands/) - Django管理命令
+- **工具模块**: [monitoring/utils/](mdc:monitoring/utils/) - 核心业务逻辑
+- **数据模型**: [monitoring/models.py](mdc:monitoring/models.py) - 数据库模型定义
+- **配置文件**: [app_monitor/settings.py](mdc:app_monitor/settings.py) - Django设置
+- **Docker配置**: [docker-compose.yml](mdc:docker-compose.yml) - 容器化部署
+
+## 核心组件
+
+### 数据模型
+- `App` - App应用配置
+- `Credential` - API凭证管理
+- `DataRecord` - 数据记录存储
+- `TaskSchedule` - 任务调度配置
+- `TaskExecution` - 任务执行历史
+
+### 工具模块
+- `api_clients.py` - Apple/Google API客户端
+- `analytics.py` - 数据分析引擎
+- `anomaly_detector.py` - 异常检测算法
+- `lark_notifier.py` - Lark通知集成
+- `task_executor.py` - 任务执行器
+- `encryption.py` - 数据加密工具
+
+### 管理命令
+- `init_historical_data.py` - 初始化历史数据
+- `run_daily_task.py` - 执行日常任务
+- `manage_scheduler.py` - 调度器管理
+- `test_api_clients.py` - API客户端测试
+
+## 开发规范
+
+- 使用中文注释和日志输出
+- 遵循 Django 最佳实践
+- 支持 Docker 容器化部署
+- 集成任务调度系统

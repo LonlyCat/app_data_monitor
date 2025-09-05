@@ -1,0 +1,185 @@
+description:
+globs:
+alwaysApply: true
+---
+# 任务调度开发规范
+
+## 调度器架构
+
+### 核心组件
+- 任务定义和配置
+- 调度器管理
+- 执行器引擎
+- 状态监控
+
+```python
+class TaskExecutor:
+    def __init__(self):
+        self.scheduler = None
+        self.logger = logging.getLogger(__name__)
+    
+    def initialize_scheduler(self):
+        """初始化调度器"""
+        # 调度器配置和初始化
+        pass
+    
+    def add_task(self, task_config):
+        """添加任务到调度器"""
+        # 任务添加逻辑
+        pass
+```
+
+### 任务配置
+- 支持Cron表达式
+- 动态任务参数
+- 任务依赖关系
+- 执行策略配置
+
+```python
+class TaskSchedule(models.Model):
+    name = models.CharField(max_length=200, verbose_name='任务名称')
+    cron_expression = models.CharField(max_length=100, verbose_name='Cron表达式')
+    is_active = models.BooleanField(default=True, verbose_name='启用状态')
+    retry_count = models.IntegerField(default=3, verbose_name='重试次数')
+    timeout_seconds = models.IntegerField(default=3600, verbose_name='超时时间(秒)')
+```
+
+## 任务执行
+
+### 执行流程
+- 任务状态管理
+- 执行日志记录
+- 错误处理机制
+- 重试策略
+
+```python
+def execute_task(self, task_id):
+    """执行任务"""
+    try:
+        # 更新任务状态为执行中
+        self._update_task_status(task_id, 'running')
+        
+        # 执行任务逻辑
+        result = self._run_task_logic(task_id)
+        
+        # 更新任务状态为成功
+        self._update_task_status(task_id, 'completed', result)
+        
+    except Exception as e:
+        # 处理执行异常
+        self._handle_task_error(task_id, e)
+```
+
+### 状态管理
+- 任务状态跟踪
+- 执行历史记录
+- 性能指标统计
+- 异常状态处理
+
+```python
+class TaskExecution(models.Model):
+    STATUS_CHOICES = [
+        ('pending', '等待中'),
+        ('running', '执行中'),
+        ('completed', '已完成'),
+        ('failed', '失败'),
+        ('cancelled', '已取消'),
+    ]
+    
+    task_schedule = models.ForeignKey(TaskSchedule, on_delete=models.CASCADE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    execution_log = models.TextField(blank=True)
+```
+
+## 管理命令
+
+### 命令规范
+- 统一的命令接口
+- 参数验证机制
+- 执行状态反馈
+- 错误处理策略
+
+```python
+class Command(BaseCommand):
+    help = '任务调度管理命令'
+    
+    def add_arguments(self, parser):
+        parser.add_argument(
+            '--action',
+            choices=['start', 'stop', 'restart', 'status'],
+            required=True,
+            help='调度器操作类型'
+        )
+    
+    def handle(self, *args, **options):
+        action = options['action']
+        
+        if action == 'start':
+            self._start_scheduler()
+        elif action == 'stop':
+            self._stop_scheduler()
+        elif action == 'restart':
+            self._restart_scheduler()
+        elif action == 'status':
+            self._show_status()
+```
+
+### 常用命令
+- `manage_scheduler.py` - 调度器管理
+- `run_daily_task.py` - 日常任务执行
+- `init_historical_data.py` - 历史数据初始化
+- `test_api_clients.py` - API客户端测试
+
+## 监控和告警
+
+### 执行监控
+- 实时状态监控
+- 性能指标统计
+- 资源使用监控
+- 异常事件检测
+
+```python
+def monitor_execution(self):
+    """监控任务执行"""
+    # 检查任务状态
+    running_tasks = self._get_running_tasks()
+    
+    # 检查超时任务
+    timeout_tasks = self._check_timeout_tasks()
+    
+    # 检查失败任务
+    failed_tasks = self._get_failed_tasks()
+    
+    # 生成监控报告
+    report = self._generate_monitoring_report()
+    
+    return report
+```
+
+### 告警机制
+- 任务失败告警
+- 执行超时告警
+- 资源不足告警
+- 系统异常告警
+
+## 最佳实践
+
+### 任务设计
+- 任务职责单一
+- 支持幂等操作
+- 实现优雅降级
+- 添加超时控制
+
+### 错误处理
+- 分类错误类型
+- 实现重试机制
+- 记录详细日志
+- 提供错误恢复
+
+### 性能优化
+- 任务并行执行
+- 资源池管理
+- 缓存机制
+- 批量处理
