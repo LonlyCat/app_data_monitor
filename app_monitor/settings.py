@@ -21,7 +21,14 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-changeme-in-production')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG')
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1'])
+# 更稳健的 ALLOWED_HOSTS 解析，支持通配符"*"及逗号分隔
+_raw_allowed_hosts = env('ALLOWED_HOSTS', default=None)
+if _raw_allowed_hosts is None or _raw_allowed_hosts.strip() == '':
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+elif _raw_allowed_hosts.strip() == '*':
+    ALLOWED_HOSTS = ['*']
+else:
+    ALLOWED_HOSTS = [h.strip() for h in _raw_allowed_hosts.split(',') if h.strip()]
 
 # Application definition
 INSTALLED_APPS = [
@@ -36,6 +43,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # 使用 WhiteNoise 在生产环境下直接由应用服务静态文件
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -112,6 +121,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# WhiteNoise 静态文件存储（压缩+指纹）
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -160,3 +172,7 @@ ENCRYPTION_KEY = env('ENCRYPTION_KEY', default=None)
 # This delay accounts for the time it takes for Apple/Google to process and
 # finalize the data for a given day. The default of 2 is a safe value.
 DATA_FETCH_DELAY_DAYS = env.int('DATA_FETCH_DELAY_DAYS', default=2)
+
+# 在非 HTTPS 或通过 IP 访问时，浏览器会忽略 COOP 头并产生警告。
+# 关闭该头可以减少前端控制台噪音（生产环境建议配合 HTTPS 再启用）。
+SECURE_CROSS_ORIGIN_OPENER_POLICY = None

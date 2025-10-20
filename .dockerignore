@@ -1,0 +1,32 @@
+# Exclude VCS and IDE files
+.git
+.gitignore
+.vscode
+.idea
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+
+# Environments
+venv
+.venv
+
+# Local env files (runtime only)
+.env
+.env.*
+!.env.release
+!.env.release.example
+
+# Logs and artifacts
+logs
+*.log
+
+# Node/Yarn (if any)
+node_modules
+
+# Static files collected at runtime
+staticfiles

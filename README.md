@@ -403,6 +403,38 @@ python manage.py manage_scheduler status
 - 监控系统资源使用
 - 定期备份数据库
 
+### 无代码部署（基于预构建镜像）
+
+不在服务器拉取源代码，直接拉取容器镜像并运行。
+
+- 方案概览：
+  - 在 CI 或本地将镜像构建并推送至镜像仓库（Docker Hub/自建/GHCR）。
+  - 在线上服务器仅保留 `docker-compose.release.yml` 和 `.env.release`，通过镜像启动。
+
+- 步骤：
+  1) 本地/CI 构建并推送镜像（示例）：
+     ```bash
+     docker build -t docker.io/yourrepo/app-data-monitor:1.0.0 .
+     docker push docker.io/yourrepo/app-data-monitor:1.0.0
+     ```
+  2) 线上服务器准备环境：
+     ```bash
+     # 准备环境变量
+     cp .env.release.example .env.release
+     # 编辑 .env.release，设置 SECRET_KEY、ALLOWED_HOSTS、ENCRYPTION_KEY 等
+     ```
+  3) 启动（无需源代码，指定镜像即可）：
+     ```bash
+     ./start_release.sh --image docker.io/yourrepo/app-data-monitor:1.0.0
+     ```
+
+- 说明：
+  - `docker-compose.release.yml` 的 `web` 服务使用预构建镜像（通过 `WEB_IMAGE` 指定）。
+  - 容器入口脚本会在启动时自动执行迁移和收集静态文件；如需自动创建管理员，
+    可在 `.env.release` 中设置 `DJANGO_SUPERUSER_USERNAME` 与 `DJANGO_SUPERUSER_PASSWORD`。
+  - 本项目默认通过 Django `runserver` 在容器中对外提供 8000 端口（便于与当前方案保持一致）。
+    如需改为 Gunicorn/Nginx 等更适合生产的方式，可在镜像/Compose 中调整。
+
 ## 📄 许可证
 
 本项目采用 MIT 许可证。详见 LICENSE 文件。
