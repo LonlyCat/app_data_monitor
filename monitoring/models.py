@@ -119,10 +119,18 @@ class Credential(models.Model):
     
     def get_config_data(self):
         """解密获取配置数据"""
-        if self._config_data:
+        if not self._config_data:
+            return {}
+        try:
             decrypted_data = decrypt_data(self._config_data)
             return json.loads(decrypted_data)
-        return {}
+        except Exception as e:
+            # 避免在 Admin 列表/表单初始化阶段抛出 500，记录错误并返回空配置
+            import logging
+            logging.getLogger(__name__).error(
+                "读取凭证配置失败，可能是 ENCRYPTION_KEY 缺失或不匹配: %s", e
+            )
+            return {}
     
     config_data = property(get_config_data, set_config_data)
     
