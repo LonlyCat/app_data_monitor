@@ -16,8 +16,6 @@ services:
       retries: 5
 
   web:
-    # Use a prebuilt image from your registry
-    # Example: WEB_IMAGE=docker.io/yourrepo/app-data-monitor:1.0.0
     image: ${WEB_IMAGE}
     command: python manage.py runserver 0.0.0.0:8000
     ports:

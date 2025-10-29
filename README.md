@@ -231,7 +231,63 @@ python manage.py generate_sample_data --app-id 1 --days 60
 
 ### 任务调度管理
 
-#### 方法一：后台守护进程（推荐）
+#### 一键初始化（推荐在 VPC 上使用）
+
+使用脚本 `./setup_scheduler_tick.sh` 快速安装每分钟一次的 tick（无常驻、低资源占用）：
+
+```bash
+# 为当前用户安装 cron，每分钟执行一次
+./setup_scheduler_tick.sh
+
+# 加上开机自启（@reboot 先启动 compose 堆栈）
+./setup_scheduler_tick.sh --with-reboot
+
+# 指定项目路径/compose 文件/项目名（可选）
+./setup_scheduler_tick.sh \
+  --project-dir /path/to/app_data_monitor \
+  --compose-file docker-compose.release.yml \
+  --project-name app_data_monitor
+
+# 使用 systemd timer 安装（需 root，重启更稳健）
+sudo ./setup_scheduler_tick.sh --systemd
+
+# 卸载
+./setup_scheduler_tick.sh --remove               # 移除 cron
+sudo ./setup_scheduler_tick.sh --systemd --remove # 移除 systemd timer
+```
+
+说明：
+- 脚本默认在每次执行前 `sleep 10` 秒，帮助等待容器就绪；可用 `--delay` 调整。
+- 脚本会将日志写入 `logs/scheduler-cron.log`。
+
+#### 方法零：无常驻 Tick（低资源环境强烈推荐）
+
+通过一次性管理命令 `scheduler_tick` 每分钟触发，避免在低配实例（如 GCP e2-micro）上常驻调度器造成的 CPU 飙升。
+
+1) 主机上配置 cron（按你的路径/项目名调整）：
+```bash
+* * * * * cd /Users/bingsen/Documents/Project/Works/app_data_monitor && \
+  docker compose -f docker-compose.release.yml -p app_data_monitor exec -T web \
+  python manage.py scheduler_tick >> logs/scheduler-cron.log 2>&1
+```
+
+2) 首次创建日志目录：
+```bash
+mkdir -p logs && touch logs/scheduler-cron.log
+```
+
+3) 验证（干跑预览）：
+```bash
+docker compose -f docker-compose.release.yml -p app_data_monitor exec -T web \
+  python manage.py scheduler_tick --dry-run
+```
+
+说明：
+- `scheduler_tick` 会在当前分钟筛选匹配 `TaskSchedule(hour, minute)` 的调度，并按 `daily/weekly/monthly` 判定；
+- 自带文件锁，避免并发；若上一次尚未结束，本次会自动跳过；
+- 采用该方式后，无需再使用 `start_scheduler.sh` 或 `manage_scheduler start` 的常驻模式。
+
+#### 方法一：后台守护进程（不推荐用于低配机器）
 
 ```bash
 # 启动任务调度器到后台
@@ -290,7 +346,19 @@ python manage.py execute_task --skip-notifications
 
 ## ⏰ 任务调度设置
 
-### 方法一: 集成调度器 (推荐)
+### 方法零：无常驻 Tick（低资源推荐）
+
+无需常驻进程，使用系统 cron 每分钟触发一次：
+
+```bash
+* * * * * cd /Users/bingsen/Documents/Project/Works/app_data_monitor && \
+  docker compose -f docker-compose.release.yml -p app_data_monitor exec -T web \
+  python manage.py scheduler_tick >> logs/scheduler-cron.log 2>&1
+```
+
+优点：极低资源占用、无多实例隐患；建议在 e2-micro 等突发型实例优先使用。
+
+### 方法一: 集成调度器（常驻）
 
 使用内置的任务调度系统，无需配置系统Cron Jobs：
 
