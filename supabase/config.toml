@@ -1,0 +1,73 @@
+# Supabase configuration file
+# https://supabase.com/docs/guides/cli/config
+
+project_id = "" # Will be filled when linking to a Supabase project
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+extra_search_path = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 20
+max_client_conn = 100
+
+[realtime]
+enabled = true
+port = 54323
+ip_version = "ipv4"
+
+[studio]
+enabled = true
+port = 54324
+api_url = "http://localhost"
+
+[inbucket]
+enabled = true
+port = 54325
+smtp_port = 54326
+pop3_port = 54327
+
+[storage]
+enabled = true
+port = 54328
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["https://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[edge_functions]
+enabled = true
+
+# Edge Runtime (Deno) version
+# https://github.com/supabase/edge-runtime/releases
+[edge_runtime]
+policy = "per_worker"
+
+# Edge Functions environment variables
+# Set these in your Supabase dashboard or .env file
+[edge_functions.env]
+# ENCRYPTION_KEY will be set in Supabase Secrets
+# Third-party API credentials will be set in Supabase Secrets
+
+[analytics]
+enabled = false

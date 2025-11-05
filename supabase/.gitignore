@@ -1,0 +1,7 @@
+# Supabase CLI
+.branches
+.temp
+.env
+
+# Local development
+.DS_Store
