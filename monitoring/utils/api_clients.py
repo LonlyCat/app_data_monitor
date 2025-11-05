@@ -1275,29 +1275,43 @@ class GooglePlayConsoleClient:
             raise
 
     def _find_overview_blob(self, package_name: str, target_date: datetime):
-        """在GCS中查找指定月份的 overview CSV blob"""
+        """在GCS中查找指定月份的 overview CSV blob；当月缺失时回退上一月"""
         if not self._gcs_bucket_name:
             raise Exception("缺少GCS Bucket名称配置(gcs_bucket_name)")
         client = self._get_gcs_client()
         bucket = client.bucket(self._gcs_bucket_name)
 
-        month_str = target_date.strftime('%Y%m')
-        prefix = f"stats/installs/installs_{package_name}_{month_str}"
-        logger.info(f"在GCS列举前缀: {prefix}")
-        try:
-            blobs = list(bucket.list_blobs(prefix=prefix))
-        except Exception as e:
-            logger.error(f"列举GCS对象失败: {e}")
-            raise
+        def _list_overview_for_month(dt: datetime):
+            month_str_local = dt.strftime('%Y%m')
+            prefix_local = f"stats/installs/installs_{package_name}_{month_str_local}"
+            logger.info(f"在GCS列举前缀: {prefix_local}")
+            try:
+                blobs_local = list(bucket.list_blobs(prefix=prefix_local))
+            except Exception as e:
+                logger.error(f"列举GCS对象失败: {e}")
+                raise
+            # 选择包含 overview 的CSV
+            overview_local = [b for b in blobs_local if b.name.endswith('_overview.csv')]
+            if not overview_local:
+                # 兼容大小写或其他后缀
+                overview_local = [b for b in blobs_local if 'overview' in b.name and b.name.endswith('.csv')]
+            names_local = [b.name for b in blobs_local]
+            return overview_local, names_local, prefix_local
 
-        # 选择包含 overview 的CSV
-        overview_blobs = [b for b in blobs if b.name.endswith('_overview.csv')]
+        # 优先尝试目标月份
+        overview_blobs, names_curr, prefix_curr = _list_overview_for_month(target_date)
         if not overview_blobs:
-            # 兼容大小写或其他后缀
-            overview_blobs = [b for b in blobs if 'overview' in b.name and b.name.endswith('.csv')]
-        if not overview_blobs:
-            names = [b.name for b in blobs]
-            raise Exception(f"未找到overview报表，可用对象: {names}")
+            # 目标月份不存在，回退到上一个月
+            prev_month_date = (target_date.replace(day=1) - timedelta(days=1))
+            overview_prev, names_prev, prefix_prev = _list_overview_for_month(prev_month_date)
+            if not overview_prev:
+                # 两个月都没有，抛出更友好的错误
+                raise Exception(
+                    f"未找到overview报表，当前前缀({prefix_curr})可用对象: {names_curr}；"
+                    f"上月前缀({prefix_prev})可用对象: {names_prev}"
+                )
+            logger.warning(f"当前月份无overview报表，已回退到上月前缀: {prefix_prev}")
+            overview_blobs = overview_prev
 
         # 一般只有一个，若多个则按更新日期取最新
         overview_blobs.sort(key=lambda b: b.updated or datetime.min, reverse=True)
