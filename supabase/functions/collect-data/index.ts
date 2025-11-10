@@ -1,9 +1,6 @@
 /**
  * collect-data Edge Function
  * Collects data from Apple App Store Connect and Google Play Console APIs
- *
- * This is a simplified MVP implementation. Full API client implementation
- * needs to be completed based on the Python version in monitoring/utils/api_clients.py
  */
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
@@ -25,6 +22,10 @@ import {
   log,
   retryWithBackoff,
 } from '../_shared/utils.ts';
+import {
+  AppleAppStoreConnectClient,
+  GooglePlayConsoleClient,
+} from '../_shared/api-clients.ts';
 import type { App, CredentialConfig, DataRecord } from '../_shared/types.ts';
 
 // Data fetch delay in days (same as Django setting)
@@ -135,16 +136,6 @@ serve(async (req) => {
 
 /**
  * Fetch data from Apple App Store Connect API
- *
- * TODO: Implement full Apple API client based on:
- * monitoring/utils/api_clients.py:AppStoreConnectClient
- *
- * Key features needed:
- * - JWT ES256 token generation
- * - Analytics reports API
- * - Download source breakdown
- * - Session data
- * - Deletion events
  */
 async function fetchAppleData(
   app: App,
@@ -153,61 +144,80 @@ async function fetchAppleData(
 ): Promise<Partial<DataRecord>> {
   log('info', 'Fetching Apple data', { app: app.name, date });
 
-  // TODO: Implement Apple API client
-  // This is a placeholder implementation
-  // Full implementation should:
-  // 1. Generate JWT token with ES256 algorithm
-  // 2. Call App Store Connect Analytics API
-  // 3. Fetch download reports with source breakdown
-  // 4. Fetch session reports
-  // 5. Fetch deletion events from detailed install report
+  try {
+    // Create Apple API client
+    const client = new AppleAppStoreConnectClient(config);
 
-  // Placeholder data structure
-  const data: Partial<DataRecord> = {
-    downloads: 0,
-    sessions: 0,
-    deletions: 0,
-    unique_devices: null,
-    downloads_app_store_search: 0,
-    downloads_web_referrer: 0,
-    downloads_app_referrer: 0,
-    downloads_app_store_browse: 0,
-    downloads_institutional: 0,
-    downloads_other: 0,
-    revenue: 0,
-    rating: null,
-    raw_data: {
-      platform: 'ios',
-      source: 'app_store_connect',
-      date,
-      bundle_id: app.bundle_id,
-    },
-  };
+    // Convert date string to Date object
+    const targetDate = new Date(date);
 
-  // TODO: Call Apple API client here
-  // Example (pseudo-code):
-  // const client = new AppleAppStoreConnectClient(config);
-  // const analyticsData = await client.fetchAnalyticsData(app.bundle_id, date);
-  // data.downloads = analyticsData.downloads;
-  // data.sessions = analyticsData.sessions;
-  // etc.
+    // Fetch analytics data
+    const analyticsData = await client.getAnalyticsData(app.bundle_id, targetDate);
 
-  log('warn', 'Apple API client not fully implemented - returning placeholder data');
+    // Map to DataRecord structure
+    const data: Partial<DataRecord> = {
+      downloads: analyticsData.downloads || 0,
+      sessions: analyticsData.sessions || 0,
+      deletions: analyticsData.deletions || 0,
+      unique_devices: analyticsData.unique_devices || null,
+      downloads_app_store_search: analyticsData.downloads_app_store_search || 0,
+      downloads_web_referrer: analyticsData.downloads_web_referrer || 0,
+      downloads_app_referrer: analyticsData.downloads_app_referrer || 0,
+      downloads_app_store_browse: analyticsData.downloads_app_store_browse || 0,
+      downloads_institutional: analyticsData.downloads_institutional || 0,
+      downloads_other: analyticsData.downloads_other || 0,
+      revenue: 0, // Revenue data requires separate API call
+      rating: null, // Rating data requires separate API call
+      raw_data: {
+        platform: 'ios',
+        source: 'app_store_connect',
+        date,
+        bundle_id: app.bundle_id,
+        analytics_data: analyticsData.raw_data,
+        error: analyticsData.error,
+      },
+    };
 
-  return data;
+    if (analyticsData.error) {
+      log('warn', `Apple API returned error for ${app.name}`, { error: analyticsData.error });
+    } else {
+      log('info', `Successfully fetched Apple data for ${app.name}`, {
+        downloads: data.downloads,
+        sessions: data.sessions,
+      });
+    }
+
+    return data;
+  } catch (error) {
+    log('error', `Failed to fetch Apple data for ${app.name}`, { error: error.message });
+
+    // Return zero data with error
+    return {
+      downloads: 0,
+      sessions: 0,
+      deletions: 0,
+      unique_devices: null,
+      downloads_app_store_search: 0,
+      downloads_web_referrer: 0,
+      downloads_app_referrer: 0,
+      downloads_app_store_browse: 0,
+      downloads_institutional: 0,
+      downloads_other: 0,
+      revenue: 0,
+      rating: null,
+      raw_data: {
+        platform: 'ios',
+        source: 'app_store_connect',
+        date,
+        bundle_id: app.bundle_id,
+        error: error.message,
+      },
+    };
+  }
 }
 
 /**
  * Fetch data from Google Play Console API
- *
- * TODO: Implement full Google API client based on:
- * monitoring/utils/api_clients.py:GooglePlayConsoleClient
- *
- * Key features needed:
- * - Service account authentication
- * - Google Play Developer Reporting API
- * - Stats reports with date validation
- * - Historical data backfill logic
  */
 async function fetchGoogleData(
   app: App,
@@ -216,113 +226,85 @@ async function fetchGoogleData(
 ): Promise<Partial<DataRecord>> {
   log('info', 'Fetching Google data', { app: app.name, date });
 
-  // TODO: Implement Google API client
-  // This is a placeholder implementation
-  // Full implementation should:
-  // 1. Authenticate with service account
-  // 2. Call Google Play Developer Reporting API
-  // 3. Handle date validation (data availability check)
-  // 4. Implement historical data backfill logic for recent apps
-  // 5. Parse overview and detailed reports
+  try {
+    // Create Google API client
+    const client = new GooglePlayConsoleClient(config);
 
-  // Placeholder data structure
-  const data: Partial<DataRecord> = {
-    downloads: 0,
-    sessions: 0,
-    deletions: 0,
-    unique_devices: null,
-    downloads_app_store_search: 0,
-    downloads_web_referrer: 0,
-    downloads_app_referrer: 0,
-    downloads_app_store_browse: 0,
-    downloads_institutional: 0,
-    downloads_other: 0,
-    revenue: 0,
-    rating: null,
-    raw_data: {
-      platform: 'android',
-      source: 'google_play_console',
-      date,
-      package_name: app.bundle_id,
-    },
-  };
+    // Convert date string to Date object
+    const targetDate = new Date(date);
 
-  // TODO: Call Google API client here
-  // Example (pseudo-code):
-  // const client = new GooglePlayConsoleClient(config);
-  // const statsData = await client.fetchStats(app.bundle_id, date);
-  // data.downloads = statsData.store_listing_acquisitions;
-  // data.sessions = statsData.sessions;
-  // etc.
+    // Fetch statistics data from GCS
+    const statsData = await client.getStatisticsData(app.bundle_id, targetDate);
 
-  log('warn', 'Google API client not fully implemented - returning placeholder data');
+    // Map to DataRecord structure
+    // Note: Google Play doesn't provide download source breakdown like Apple
+    const data: Partial<DataRecord> = {
+      downloads: statsData.downloads || 0,
+      sessions: statsData.sessions || 0,
+      deletions: statsData.deletions || 0,
+      unique_devices: null,
+      downloads_app_store_search: 0,
+      downloads_web_referrer: 0,
+      downloads_app_referrer: 0,
+      downloads_app_store_browse: 0,
+      downloads_institutional: 0,
+      downloads_other: 0,
+      revenue: 0, // Revenue data requires separate API call
+      rating: null, // Rating data requires separate API call
+      raw_data: {
+        platform: 'android',
+        source: 'google_play_console',
+        date,
+        package_name: app.bundle_id,
+        effective_date: statsData.effective_date,
+        available_dates: statsData.available_dates,
+        max_available_date: statsData.max_available_date,
+        sessions_available: statsData.sessions_available,
+        stats_data: statsData.raw_data,
+        error: statsData.error,
+      },
+    };
 
-  return data;
-}
+    if (statsData.error) {
+      log('warn', `Google API returned error for ${app.name}`, { error: statsData.error });
+    } else if (statsData.effective_date !== date) {
+      log('warn', `Google data for ${app.name} used fallback date`, {
+        requested: date,
+        effective: statsData.effective_date,
+      });
+    } else {
+      log('info', `Successfully fetched Google data for ${app.name}`, {
+        downloads: data.downloads,
+        deletions: data.deletions,
+      });
+    }
 
-/**
- * Apple App Store Connect API Client
- *
- * TODO: Port from monitoring/utils/api_clients.py:AppStoreConnectClient
- *
- * Key methods to implement:
- * - _generateJwtToken(): Create ES256 JWT token
- * - _makeRequest(): HTTP request with retry logic
- * - getReports(): Fetch available reports
- * - downloadReport(): Download CSV report data
- * - fetchAnalyticsData(): Get downloads, sessions, deletions
- */
-class AppleAppStoreConnectClient {
-  private issuer_id: string;
-  private key_id: string;
-  private private_key: string;
-  private token?: string;
-  private token_expires?: number;
+    return data;
+  } catch (error) {
+    log('error', `Failed to fetch Google data for ${app.name}`, { error: error.message });
 
-  constructor(config: CredentialConfig) {
-    this.issuer_id = config.issuer_id || '';
-    this.key_id = config.key_id || '';
-    this.private_key = config.private_key || '';
+    // Return zero data with error
+    return {
+      downloads: 0,
+      sessions: 0,
+      deletions: 0,
+      unique_devices: null,
+      downloads_app_store_search: 0,
+      downloads_web_referrer: 0,
+      downloads_app_referrer: 0,
+      downloads_app_store_browse: 0,
+      downloads_institutional: 0,
+      downloads_other: 0,
+      revenue: 0,
+      rating: null,
+      raw_data: {
+        platform: 'android',
+        source: 'google_play_console',
+        date,
+        package_name: app.bundle_id,
+        error: error.message,
+      },
+    };
   }
-
-  // TODO: Implement JWT generation using jose or similar library
-  // async generateJwtToken(): Promise<string> { ... }
-
-  // TODO: Implement API request methods
-  // async makeRequest(endpoint: string, params?: any): Promise<any> { ... }
-
-  // TODO: Implement analytics data fetching
-  // async fetchAnalyticsData(bundleId: string, date: string): Promise<any> { ... }
 }
 
-/**
- * Google Play Console API Client
- *
- * TODO: Port from monitoring/utils/api_clients.py:GooglePlayConsoleClient
- *
- * Key methods to implement:
- * - _authenticate(): Service account OAuth2
- * - _makeRequest(): HTTP request with retry logic
- * - fetchStats(): Get downloads and sessions
- * - validateDataDate(): Check if data is available for date
- */
-class GooglePlayConsoleClient {
-  private service_account_email: string;
-  private private_key: string;
-  private access_token?: string;
-  private token_expires?: number;
-
-  constructor(config: CredentialConfig) {
-    this.service_account_email = config.service_account_email || '';
-    this.private_key = config.private_key || '';
-  }
-
-  // TODO: Implement OAuth2 authentication
-  // async authenticate(): Promise<string> { ... }
-
-  // TODO: Implement API request methods
-  // async makeRequest(endpoint: string, params?: any): Promise<any> { ... }
-
-  // TODO: Implement stats data fetching
-  // async fetchStats(packageName: string, date: string): Promise<any> { ... }
-}
