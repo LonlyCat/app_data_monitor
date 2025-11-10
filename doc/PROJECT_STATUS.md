@@ -4,21 +4,22 @@
 
 ## 📊 整体进度
 
-**迁移状态**: 🟢 **基础完成，可开始使用**
+**迁移状态**: 🟢 **MVP 完成，可开始使用**
 
-已完成核心架构迁移的所有基础组件，系统已具备基本功能，可以开始部署和测试。
+已完成核心架构迁移的所有基础组件，包括完整的 API 客户端实现，系统已具备完整功能，可以开始部署和使用。
 
 ### 完成度统计
 
 | 模块 | 完成度 | 状态 |
 |------|---------|------|
 | 数据库层 | 100% | ✅ 完成 |
-| Edge Functions 框架 | 90% | ⚠️ 需补充 API 客户端 |
+| Edge Functions 框架 | 100% | ✅ 完成 |
+| API 客户端 | 100% | ✅ 完成 |
 | 前端页面 | 100% | ✅ 完成 |
 | 任务调度 | 100% | ✅ 完成 |
 | 数据迁移 | 100% | ✅ 完成 |
 | 文档 | 100% | ✅ 完成 |
-| **总体** | **85%** | **🟢 可用** |
+| **总体** | **100%** | **🟢 MVP 完成** |
 
 ## ✅ 已完成的工作
 
@@ -66,13 +67,35 @@
   - 重试机制
   - 错误处理
 
+#### API 客户端 (`_shared/api-clients.ts`) ✅
+
+- ✅ **Apple App Store Connect 客户端**
+  - ✅ JWT ES256 身份验证（使用 jose 库）
+  - ✅ Analytics 报告请求管理
+  - ✅ 报告实例获取（支持日期过滤）
+  - ✅ 安装报告处理（标准报告 + 详细报告）
+  - ✅ 会话报告处理
+  - ✅ CSV 下载和解析（gzip 解压缩）
+  - ✅ 下载来源分类（6 个类别）
+  - ✅ 每日数据聚合
+
+- ✅ **Google Play Console 客户端**
+  - ✅ OAuth2 Service Account 身份验证
+  - ✅ Google Cloud Storage (GCS) 集成
+  - ✅ Overview CSV 下载
+  - ✅ 基于月份的报告查找（支持回退到上月）
+  - ✅ CSV 编码检测（UTF-16/UTF-8）
+  - ✅ 每日用户安装和卸载提取
+  - ✅ 日期回退逻辑
+
 #### 核心函数
 
 - ✅ **`collect-data/`** - 数据采集函数
   - ✅ 框架完整
   - ✅ 支持单应用和批量采集
   - ✅ 支持 dry-run 模式
-  - ⚠️ **需要补充**: Apple/Google API 客户端实现
+  - ✅ 完整的 Apple/Google API 客户端集成
+  - ✅ 错误处理和日志记录
 
 - ✅ **`check-alerts/`** - 告警检查函数
   - ✅ 指标增长率计算（DOD/WOW）
@@ -176,41 +199,28 @@
 - ✅ `MIGRATION_GUIDE.md` - 完整迁移指南
 - ✅ `SUPABASE_MIGRATION_SUMMARY.md` - 项目总结
 - ✅ `PG_CRON_SETUP.md` - 任务调度配置
+- ✅ `API_CLIENTS_IMPLEMENTATION.md` - API 客户端实现文档
 - ✅ `PROJECT_STATUS.md` - 本文档
 
-## ⚠️ 待完成的工作
+## 🎯 MVP 已完成
 
-### 高优先级（MVP 必需）
+**核心功能已全部实现，系统可以投入使用！**
 
-#### 1. API 客户端实现 🔴
+所有高优先级任务已完成：
+- ✅ 数据库架构迁移
+- ✅ Edge Functions 框架
+- ✅ Apple App Store Connect API 客户端
+- ✅ Google Play Console API 客户端
+- ✅ 前端 6 个核心页面
+- ✅ 任务调度配置
+- ✅ 数据迁移工具
+- ✅ 完整文档
 
-**文件**: `supabase/functions/collect-data/index.ts`
+## 💡 后续增强功能（可选）
 
-需要完成的部分：
+### 中优先级（用户体验提升）
 
-- [ ] **Apple App Store Connect API 客户端**
-  - [ ] JWT ES256 token 生成（使用 `jose` 库）
-  - [ ] Analytics Reports API 调用
-  - [ ] 下载量数据获取（含来源细分）
-  - [ ] 会话数据获取
-  - [ ] 删除事件获取
-  - [ ] 参考文件: `monitoring/utils/api_clients.py:AppStoreConnectClient`
-
-- [ ] **Google Play Console API 客户端**
-  - [ ] OAuth2 Service Account 认证
-  - [ ] Google Play Developer Reporting API
-  - [ ] 统计数据获取
-  - [ ] 日期验证和回退逻辑
-  - [ ] 参考文件: `monitoring/utils/api_clients.py:GooglePlayConsoleClient`
-
-**预计工作量**: 2-3天
-
-**参考资源**:
-- [Apple App Store Connect API](https://developer.apple.com/documentation/appstoreconnectapi)
-- [Google Play Developer Reporting API](https://developers.google.com/play/developer/reporting)
-- Python 版本: `monitoring/utils/api_clients.py`
-
-#### 2. 前端 CRUD 操作 🟡
+#### 1. 前端 CRUD 操作 🟡
 
 当前前端页面只有展示功能，需要添加：
 
@@ -222,9 +232,7 @@
 
 **预计工作量**: 1-2天
 
-### 中优先级（功能增强）
-
-#### 3. Supabase Auth 集成 🟡
+#### 2. Supabase Auth 集成 🟡
 
 **文件**: `web/app/`, `supabase/migrations/`
 
@@ -235,7 +243,7 @@
 
 **预计工作量**: 1天
 
-#### 4. 数据可视化 🟡
+#### 3. 数据可视化 🟡
 
 **文件**: `web/app/dashboard/`, `web/components/`
 
@@ -246,22 +254,22 @@
 
 **预计工作量**: 1-2天
 
-### 低优先级（优化）
+### 低优先级（优化和扩展）
 
-#### 5. 性能优化 🟢
+#### 4. 性能优化 🟢
 
 - [ ] Edge Functions 缓存
 - [ ] 前端数据缓存（SWR / React Query）
 - [ ] 数据库查询优化
 - [ ] 分页和虚拟滚动
 
-#### 6. 测试 🟢
+#### 5. 测试 🟢
 
 - [ ] Edge Functions 单元测试
 - [ ] 前端组件测试
 - [ ] E2E 测试
 
-#### 7. 部署优化 🟢
+#### 6. 部署优化 🟢
 
 - [ ] CI/CD 配置（GitHub Actions）
 - [ ] 环境分离（staging/production）
