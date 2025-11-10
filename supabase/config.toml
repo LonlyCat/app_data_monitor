@@ -24,8 +24,7 @@ max_client_conn = 100
 
 [realtime]
 enabled = true
-port = 54323
-ip_version = "ipv4"
+ip_version = "IPv4"
 
 [studio]
 enabled = true
@@ -40,7 +39,6 @@ pop3_port = 54327
 
 [storage]
 enabled = true
-port = 54328
 file_size_limit = "50MiB"
 
 [auth]
@@ -54,20 +52,6 @@ enable_signup = true
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = false
-
-[edge_functions]
-enabled = true
-
-# Edge Runtime (Deno) version
-# https://github.com/supabase/edge-runtime/releases
-[edge_runtime]
-policy = "per_worker"
-
-# Edge Functions environment variables
-# Set these in your Supabase dashboard or .env file
-[edge_functions.env]
-# ENCRYPTION_KEY will be set in Supabase Secrets
-# Third-party API credentials will be set in Supabase Secrets
 
 [analytics]
 enabled = false
