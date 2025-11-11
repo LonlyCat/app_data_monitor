@@ -13,7 +13,7 @@ import {
   Button,
   Card,
   CardBody,
-} from '@nextui-org/react'
+} from '@heroui/react'
 import { supabase, type TaskSchedule } from '@/lib/supabase'
 import Link from 'next/link'
 

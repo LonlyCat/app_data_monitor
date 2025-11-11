@@ -14,7 +14,7 @@ import {
   TableRow,
   TableCell,
   Button,
-} from '@nextui-org/react'
+} from '@heroui/react'
 import { supabase, type App, type DataRecord } from '@/lib/supabase'
 import Link from 'next/link'
 

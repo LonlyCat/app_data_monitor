@@ -17,7 +17,7 @@ import {
   ModalBody,
   ModalFooter,
   useDisclosure,
-} from '@nextui-org/react'
+} from '@heroui/react'
 import { supabase, type TaskExecution } from '@/lib/supabase'
 import Link from 'next/link'
 

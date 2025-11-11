@@ -11,7 +11,7 @@ import {
   Button,
   Chip,
   Spinner,
-} from '@nextui-org/react'
+} from '@heroui/react'
 import { supabase, type App } from '@/lib/supabase'
 import Link from 'next/link'
 
