@@ -40,11 +40,32 @@ end;
 $$;
 
 -- =============================================================================
--- Daily Data Collection (Every day at 2:00 AM UTC)
+-- Cron Jobs Setup (OPTIONAL - For local development only)
+-- =============================================================================
+--
+-- IMPORTANT: For production, use Supabase Scheduled Functions instead:
+-- https://supabase.com/docs/guides/functions/schedule-functions
+--
+-- These cron jobs are commented out by default because:
+-- 1. Supabase hosted projects should use Scheduled Functions
+-- 2. pg_cron requires special setup in hosted environments
+-- 3. The jobs below are for local development/testing only
+--
+-- To enable these jobs locally, uncomment the sections below.
 -- =============================================================================
 
--- Remove existing job if exists
-select cron.unschedule('collect-daily-data');
+-- =============================================================================
+-- Daily Data Collection (Every day at 2:00 AM UTC)
+-- =============================================================================
+/*
+-- Remove existing job if exists (safe version)
+do $$
+begin
+  perform cron.unschedule('collect-daily-data');
+exception
+  when others then
+    raise notice 'Job collect-daily-data does not exist, skipping unschedule';
+end $$;
 
 -- Schedule daily data collection
 select cron.schedule(
@@ -54,13 +75,20 @@ select cron.schedule(
   select call_edge_function('collect-data', '{}'::jsonb);
   $$
 );
+*/
 
 -- =============================================================================
 -- Daily Alert Check (Every day at 3:00 AM UTC)
 -- =============================================================================
-
--- Remove existing job if exists
-select cron.unschedule('check-daily-alerts');
+/*
+-- Remove existing job if exists (safe version)
+do $$
+begin
+  perform cron.unschedule('check-daily-alerts');
+exception
+  when others then
+    raise notice 'Job check-daily-alerts does not exist, skipping unschedule';
+end $$;
 
 -- Schedule daily alert check
 select cron.schedule(
@@ -70,13 +98,20 @@ select cron.schedule(
   select call_edge_function('check-alerts', '{}'::jsonb);
   $$
 );
+*/
 
 -- =============================================================================
 -- Cleanup Old Task Executions (Every week on Sunday at 1:00 AM UTC)
 -- =============================================================================
-
--- Remove existing job if exists
-select cron.unschedule('cleanup-old-executions');
+/*
+-- Remove existing job if exists (safe version)
+do $$
+begin
+  perform cron.unschedule('cleanup-old-executions');
+exception
+  when others then
+    raise notice 'Job cleanup-old-executions does not exist, skipping unschedule';
+end $$;
 
 -- Schedule weekly cleanup of old task executions (keep last 90 days)
 select cron.schedule(
@@ -88,6 +123,7 @@ select cron.schedule(
     and status in ('success', 'failed', 'timeout', 'cancelled');
   $$
 );
+*/
 
 -- =============================================================================
 -- View all scheduled cron jobs
