@@ -181,6 +181,8 @@ id_dsa
 
 # Allow example env files
 !.env.example
+!.env*.example
+!.env.*.example
 
 # =========================
 # Docker / Compose (local overrides)
