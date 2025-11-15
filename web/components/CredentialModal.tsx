@@ -166,16 +166,25 @@ export function CredentialModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="3xl" scrollBehavior="inside">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="3xl"
+      scrollBehavior="inside"
+      classNames={{
+        base: 'max-h-[90vh]',
+        body: 'overflow-y-auto',
+      }}
+    >
       <ModalContent>
-        <form onSubmit={handleSubmit}>
-          <ModalHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]">
+          <ModalHeader className="flex-shrink-0">
             <h3 className="text-xl font-bold">
               {credential ? '编辑' : '添加'}{' '}
               {platform === 'ios' ? 'iOS' : 'Android'} 凭证
             </h3>
           </ModalHeader>
-          <ModalBody>
+          <ModalBody className="overflow-y-auto flex-1">
             {error && (
               <div className="bg-danger/10 text-danger p-3 rounded-lg text-sm">
                 {error}
@@ -322,7 +331,7 @@ export function CredentialModal({
               </ul>
             </div>
           </ModalBody>
-          <ModalFooter>
+          <ModalFooter className="flex-shrink-0">
             <Button variant="flat" onPress={onClose} isDisabled={loading}>
               取消
             </Button>

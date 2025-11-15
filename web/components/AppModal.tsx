@@ -123,15 +123,24 @@ export function AppModal({ isOpen, onClose, onSuccess, app }: AppModalProps) {
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="2xl">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      size="2xl"
+      scrollBehavior="inside"
+      classNames={{
+        base: 'max-h-[90vh]',
+        body: 'overflow-y-auto',
+      }}
+    >
       <ModalContent>
-        <form onSubmit={handleSubmit}>
-          <ModalHeader>
+        <form onSubmit={handleSubmit} className="flex flex-col max-h-[90vh]">
+          <ModalHeader className="flex-shrink-0">
             <h3 className="text-xl font-bold">
               {app ? '编辑应用' : '添加应用'}
             </h3>
           </ModalHeader>
-          <ModalBody>
+          <ModalBody className="overflow-y-auto flex-1">
             {error && (
               <div className="bg-danger/10 text-danger p-3 rounded-lg text-sm">
                 {error}
@@ -235,7 +244,7 @@ export function AppModal({ isOpen, onClose, onSuccess, app }: AppModalProps) {
               </div>
             </div>
           </ModalBody>
-          <ModalFooter>
+          <ModalFooter className="flex-shrink-0">
             <Button variant="flat" onPress={onClose} isDisabled={loading}>
               取消
             </Button>
