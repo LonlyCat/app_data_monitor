@@ -9,6 +9,14 @@ import {
   Spinner,
   Button,
   useDisclosure,
+  Table,
+  TableHeader,
+  TableColumn,
+  TableBody,
+  TableRow,
+  TableCell,
+  Tabs,
+  Tab,
 } from '@heroui/react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
@@ -18,6 +26,7 @@ import { CredentialModal } from '@/components/CredentialModal'
 
 interface Credential {
   id: number
+  name: string
   platform: 'ios' | 'android'
   config_encrypted: string
   is_active: boolean
@@ -25,9 +34,14 @@ interface Credential {
   updated_at: string
 }
 
+interface CredentialWithUsage extends Credential {
+  app_count: number
+  active_app_count: number
+}
+
 export default function CredentialsPage() {
   const { user } = useAuth()
-  const [credentials, setCredentials] = useState<Credential[]>([])
+  const [credentials, setCredentials] = useState<CredentialWithUsage[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedCredential, setSelectedCredential] = useState<Credential | null>(null)
@@ -41,13 +55,39 @@ export default function CredentialsPage() {
   async function fetchCredentials() {
     try {
       setLoading(true)
-      const { data, error } = await supabase
-        .from('credentials')
-        .select('id, platform, is_active, created_at, updated_at, config_encrypted')
-        .order('platform')
 
-      if (error) throw error
-      setCredentials(data || [])
+      // Fetch all credentials
+      const { data: credData, error: credError } = await supabase
+        .from('credentials')
+        .select('*')
+        .order('platform')
+        .order('name')
+
+      if (credError) throw credError
+
+      // For each credential, count associated apps
+      const credentialsWithUsage: CredentialWithUsage[] = await Promise.all(
+        (credData || []).map(async (cred) => {
+          const { count: appCount } = await supabase
+            .from('apps')
+            .select('*', { count: 'exact', head: true })
+            .eq('credential_id', cred.id)
+
+          const { count: activeAppCount } = await supabase
+            .from('apps')
+            .select('*', { count: 'exact', head: true })
+            .eq('credential_id', cred.id)
+            .eq('is_active', true)
+
+          return {
+            ...cred,
+            app_count: appCount || 0,
+            active_app_count: activeAppCount || 0,
+          }
+        })
+      )
+
+      setCredentials(credentialsWithUsage)
     } catch (err) {
       setError(err instanceof Error ? err.message : '加载失败')
     } finally {
@@ -67,8 +107,18 @@ export default function CredentialsPage() {
     onOpen()
   }
 
-  const handleDelete = async (credential: Credential) => {
-    if (!confirm(`确定要删除 ${credential.platform === 'ios' ? 'iOS' : 'Android'} 凭证吗？此操作不可撤销。`)) {
+  const handleDelete = async (credential: CredentialWithUsage) => {
+    // Check if credential is in use
+    if (credential.app_count > 0) {
+      alert(
+        `无法删除此凭证！\n\n` +
+        `当前有 ${credential.app_count} 个应用正在使用此凭证（${credential.active_app_count} 个活跃）。\n\n` +
+        `请先将这些应用关联到其他凭证或删除这些应用。`
+      )
+      return
+    }
+
+    if (!confirm(`确定要删除凭证 "${credential.name}" 吗？此操作不可撤销。`)) {
       return
     }
 
@@ -100,8 +150,129 @@ export default function CredentialsPage() {
     )
   }
 
-  const iosCredential = credentials.find(c => c.platform === 'ios')
-  const androidCredential = credentials.find(c => c.platform === 'android')
+  const iosCredentials = credentials.filter(c => c.platform === 'ios')
+  const androidCredentials = credentials.filter(c => c.platform === 'android')
+
+  const renderCredentialTable = (platformCredentials: CredentialWithUsage[], platform: 'ios' | 'android') => {
+    if (platformCredentials.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <div className="text-gray-500 mb-4">
+            暂无 {platform === 'ios' ? 'iOS' : 'Android'} 平台凭证
+          </div>
+          <AdminOnly
+            fallback={
+              <div className="text-sm text-gray-500">
+                仅管理员可添加凭证
+              </div>
+            }
+          >
+            <Button
+              color="primary"
+              size="md"
+              onPress={() => handleAdd(platform)}
+            >
+              + 添加 {platform === 'ios' ? 'iOS' : 'Android'} 凭证
+            </Button>
+          </AdminOnly>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <AdminOnly>
+            <Button
+              color="primary"
+              size="sm"
+              onPress={() => handleAdd(platform)}
+            >
+              + 添加凭证
+            </Button>
+          </AdminOnly>
+        </div>
+
+        <Table aria-label={`${platform} credentials table`}>
+          <TableHeader>
+            <TableColumn>凭证名称</TableColumn>
+            <TableColumn>状态</TableColumn>
+            <TableColumn>关联应用</TableColumn>
+            <TableColumn>创建时间</TableColumn>
+            <TableColumn>操作</TableColumn>
+          </TableHeader>
+          <TableBody>
+            {platformCredentials.map((credential) => (
+              <TableRow key={credential.id}>
+                <TableCell>
+                  <div className="font-medium">{credential.name}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    🔒 凭证已加密存储
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    color={credential.is_active ? 'success' : 'default'}
+                    variant="flat"
+                    size="sm"
+                  >
+                    {credential.is_active ? '活跃' : '停用'}
+                  </Chip>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    <div>总计: {credential.app_count} 个</div>
+                    <div className="text-success">活跃: {credential.active_app_count} 个</div>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {new Date(credential.created_at).toLocaleString('zh-CN')}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <AdminOnly
+                    fallback={
+                      <div className="text-xs text-gray-400">
+                        仅管理员可操作
+                      </div>
+                    }
+                  >
+                    <div className="flex gap-2">
+                      <Button
+                        color="primary"
+                        variant="flat"
+                        size="sm"
+                        onPress={() => handleEdit(credential)}
+                      >
+                        编辑
+                      </Button>
+                      <Button
+                        color="danger"
+                        variant="flat"
+                        size="sm"
+                        onPress={() => handleDelete(credential)}
+                        isDisabled={credential.app_count > 0}
+                      >
+                        删除
+                      </Button>
+                    </div>
+                  </AdminOnly>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        {platformCredentials.some(c => c.app_count > 0) && (
+          <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg text-sm">
+            <span className="font-semibold">提示：</span>
+            正在被应用使用的凭证无法删除。请先更换应用的凭证关联或删除相关应用。
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen p-8">
@@ -110,7 +281,7 @@ export default function CredentialsPage() {
           <div>
             <h1 className="text-3xl font-bold mb-2">🔑 凭证管理</h1>
             <p className="text-gray-600 dark:text-gray-400">
-              管理 Apple 和 Google 平台的 API 凭证
+              管理 Apple 和 Google 平台的 API 凭证，支持多个凭证配置
             </p>
           </div>
           <div className="flex gap-2">
@@ -131,247 +302,44 @@ export default function CredentialsPage() {
             <Spinner size="lg" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* iOS Credential */}
-            <Card className="border-2 border-primary">
-              <CardHeader className="bg-primary/10">
-                <div className="flex justify-between items-center w-full">
-                  <h3 className="text-xl font-semibold flex items-center gap-2">
-                    <span>🍎</span>
-                    <span>Apple App Store Connect</span>
-                  </h3>
-                  {iosCredential && (
-                    <Chip
-                      color={iosCredential.is_active ? 'success' : 'default'}
-                      variant="flat"
-                      size="sm"
-                    >
-                      {iosCredential.is_active ? '已配置' : '未启用'}
-                    </Chip>
-                  )}
-                </div>
-              </CardHeader>
-              <CardBody>
-                {iosCredential ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm text-gray-600 dark:text-gray-400">
-                        平台
-                      </label>
-                      <div className="font-medium">iOS (Apple App Store Connect)</div>
+          <Card>
+            <CardBody>
+              <Tabs
+                aria-label="Platform credentials"
+                color="primary"
+                variant="underlined"
+              >
+                <Tab
+                  key="ios"
+                  title={
+                    <div className="flex items-center gap-2">
+                      <span>🍎</span>
+                      <span>iOS 凭证</span>
+                      <Chip size="sm" variant="flat">
+                        {iosCredentials.length}
+                      </Chip>
                     </div>
-
-                    <div>
-                      <label className="text-sm text-gray-600 dark:text-gray-400">
-                        状态
-                      </label>
-                      <div>
-                        <Chip
-                          color={iosCredential.is_active ? 'success' : 'default'}
-                          variant="flat"
-                          size="sm"
-                        >
-                          {iosCredential.is_active ? '活跃' : '停用'}
-                        </Chip>
-                      </div>
+                  }
+                >
+                  {renderCredentialTable(iosCredentials, 'ios')}
+                </Tab>
+                <Tab
+                  key="android"
+                  title={
+                    <div className="flex items-center gap-2">
+                      <span>🤖</span>
+                      <span>Android 凭证</span>
+                      <Chip size="sm" variant="flat">
+                        {androidCredentials.length}
+                      </Chip>
                     </div>
-
-                    <div>
-                      <label className="text-sm text-gray-600 dark:text-gray-400">
-                        凭证信息
-                      </label>
-                      <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          🔒 凭证已加密存储
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          包含: Issuer ID, Key ID, Private Key
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-sm text-gray-600 dark:text-gray-400">
-                        更新时间
-                      </label>
-                      <div className="text-sm">
-                        {new Date(iosCredential.updated_at).toLocaleString('zh-CN')}
-                      </div>
-                    </div>
-
-                    <AdminOnly
-                      fallback={
-                        <div className="text-sm text-gray-500 pt-4">
-                          仅管理员可操作
-                        </div>
-                      }
-                    >
-                      <div className="flex gap-2 pt-4">
-                        <Button
-                          color="primary"
-                          variant="flat"
-                          size="sm"
-                          onPress={() => handleEdit(iosCredential)}
-                        >
-                          编辑
-                        </Button>
-                        <Button
-                          color="danger"
-                          variant="flat"
-                          size="sm"
-                          onPress={() => handleDelete(iosCredential)}
-                        >
-                          删除
-                        </Button>
-                      </div>
-                    </AdminOnly>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-gray-500 mb-4">
-                      未配置 iOS 平台凭证
-                    </div>
-                    <AdminOnly
-                      fallback={
-                        <div className="text-sm text-gray-500">
-                          仅管理员可添加凭证
-                        </div>
-                      }
-                    >
-                      <Button
-                        color="primary"
-                        size="sm"
-                        onPress={() => handleAdd('ios')}
-                      >
-                        + 添加 iOS 凭证
-                      </Button>
-                    </AdminOnly>
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-
-            {/* Android Credential */}
-            <Card className="border-2 border-success">
-              <CardHeader className="bg-success/10">
-                <div className="flex justify-between items-center w-full">
-                  <h3 className="text-xl font-semibold flex items-center gap-2">
-                    <span>🤖</span>
-                    <span>Google Play Console</span>
-                  </h3>
-                  {androidCredential && (
-                    <Chip
-                      color={androidCredential.is_active ? 'success' : 'default'}
-                      variant="flat"
-                      size="sm"
-                    >
-                      {androidCredential.is_active ? '已配置' : '未启用'}
-                    </Chip>
-                  )}
-                </div>
-              </CardHeader>
-              <CardBody>
-                {androidCredential ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm text-gray-600 dark:text-gray-400">
-                        平台
-                      </label>
-                      <div className="font-medium">
-                        Android (Google Play Console)
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-sm text-gray-600 dark:text-gray-400">
-                        状态
-                      </label>
-                      <div>
-                        <Chip
-                          color={androidCredential.is_active ? 'success' : 'default'}
-                          variant="flat"
-                          size="sm"
-                        >
-                          {androidCredential.is_active ? '活跃' : '停用'}
-                        </Chip>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-sm text-gray-600 dark:text-gray-400">
-                        凭证信息
-                      </label>
-                      <div className="bg-gray-100 dark:bg-gray-800 p-3 rounded-lg">
-                        <div className="text-sm text-gray-600 dark:text-gray-400">
-                          🔒 凭证已加密存储
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          包含: Service Account Email, Private Key, GCS Bucket
-                        </div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="text-sm text-gray-600 dark:text-gray-400">
-                        更新时间
-                      </label>
-                      <div className="text-sm">
-                        {new Date(androidCredential.updated_at).toLocaleString('zh-CN')}
-                      </div>
-                    </div>
-
-                    <AdminOnly
-                      fallback={
-                        <div className="text-sm text-gray-500 pt-4">
-                          仅管理员可操作
-                        </div>
-                      }
-                    >
-                      <div className="flex gap-2 pt-4">
-                        <Button
-                          color="primary"
-                          variant="flat"
-                          size="sm"
-                          onPress={() => handleEdit(androidCredential)}
-                        >
-                          编辑
-                        </Button>
-                        <Button
-                          color="danger"
-                          variant="flat"
-                          size="sm"
-                          onPress={() => handleDelete(androidCredential)}
-                        >
-                          删除
-                        </Button>
-                      </div>
-                    </AdminOnly>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-gray-500 mb-4">
-                      未配置 Android 平台凭证
-                    </div>
-                    <AdminOnly
-                      fallback={
-                        <div className="text-sm text-gray-500">
-                          仅管理员可添加凭证
-                        </div>
-                      }
-                    >
-                      <Button
-                        color="primary"
-                        size="sm"
-                        onPress={() => handleAdd('android')}
-                      >
-                        + 添加 Android 凭证
-                      </Button>
-                    </AdminOnly>
-                  </div>
-                )}
-              </CardBody>
-            </Card>
-          </div>
+                  }
+                >
+                  {renderCredentialTable(androidCredentials, 'android')}
+                </Tab>
+              </Tabs>
+            </CardBody>
+          </Card>
         )}
 
         {/* Security Notice */}
@@ -384,7 +352,8 @@ export default function CredentialsPage() {
             <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
               <li>所有凭证数据都以加密形式存储在数据库中</li>
               <li>只有后端 Edge Functions 可以解密和使用凭证</li>
-              <li>前端页面仅展示凭证的元数据（平台、状态、更新时间）</li>
+              <li>前端页面仅展示凭证的元数据（名称、平台、状态、更新时间）</li>
+              <li>每个平台可以配置多个凭证，不同应用可使用不同凭证</li>
               <li>请妥善保管原始凭证文件，不要分享给他人</li>
               <li>定期轮换 API 密钥以提高安全性</li>
             </ul>

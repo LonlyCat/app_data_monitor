@@ -36,7 +36,10 @@ export default function AppsPage() {
       setLoading(true)
       const { data, error } = await supabase
         .from('apps')
-        .select('*')
+        .select(`
+          *,
+          credential:credentials(id, name, platform, is_active)
+        `)
         .order('name')
 
       if (error) throw error
@@ -130,6 +133,7 @@ export default function AppsPage() {
               <TableColumn>应用名称</TableColumn>
               <TableColumn>平台</TableColumn>
               <TableColumn>Bundle ID / Package Name</TableColumn>
+              <TableColumn>关联凭证</TableColumn>
               <TableColumn>状态</TableColumn>
               <TableColumn>创建时间</TableColumn>
               <TableColumn>操作</TableColumn>
@@ -149,6 +153,20 @@ export default function AppsPage() {
                   </TableCell>
                   <TableCell className="font-mono text-sm">
                     {app.bundle_id}
+                  </TableCell>
+                  <TableCell>
+                    {app.credential_id && (app as any).credential ? (
+                      <div className="text-sm">
+                        <div className="font-medium">{(app as any).credential.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {(app as any).credential.is_active ? '✓ 活跃' : '⚠️ 停用'}
+                        </div>
+                      </div>
+                    ) : (
+                      <Chip color="warning" variant="flat" size="sm">
+                        未关联
+                      </Chip>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Chip

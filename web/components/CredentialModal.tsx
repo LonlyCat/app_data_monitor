@@ -18,6 +18,7 @@ import { supabase } from '@/lib/supabase'
 
 interface Credential {
   id?: number
+  name: string
   platform: 'ios' | 'android'
   config_encrypted: string
   is_active: boolean
@@ -51,6 +52,9 @@ export function CredentialModal({
   credential,
   platform,
 }: CredentialModalProps) {
+  // Common fields
+  const [name, setName] = useState('')
+
   // iOS fields
   const [issuerId, setIssuerId] = useState('')
   const [keyId, setKeyId] = useState('')
@@ -69,6 +73,7 @@ export function CredentialModal({
   useEffect(() => {
     if (credential && isOpen) {
       try {
+        setName(credential.name || '')
         const config = JSON.parse(credential.config_encrypted)
         if (platform === 'ios') {
           const iosConfig = config as IOSConfig
@@ -94,6 +99,7 @@ export function CredentialModal({
   }, [credential, platform, isOpen])
 
   const resetForm = () => {
+    setName('')
     setIssuerId('')
     setKeyId('')
     setPrivateKey('')
@@ -127,6 +133,7 @@ export function CredentialModal({
       }
 
       const credentialData = {
+        name,
         platform,
         config_encrypted: JSON.stringify(config),
         is_active: isActive,
@@ -175,8 +182,20 @@ export function CredentialModal({
               </div>
             )}
 
+            <div className="space-y-4">
+              <Input
+                label="凭证名称"
+                placeholder={platform === 'ios' ? '例如：主开发者账号' : '例如：主开发者账号'}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                description="用于区分不同的凭证，例如：主账号、合作伙伴账号等"
+                required
+                isRequired
+              />
+            </div>
+
             {platform === 'ios' ? (
-              <div className="space-y-4">
+              <div className="space-y-4 mt-4">
                 <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg">
                   <h4 className="font-semibold mb-2">🍎 Apple App Store Connect API</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -225,7 +244,7 @@ export function CredentialModal({
                 />
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-4 mt-4">
                 <div className="bg-green-50 dark:bg-green-950 p-4 rounded-lg">
                   <h4 className="font-semibold mb-2">🤖 Google Play Console API</h4>
                   <p className="text-sm text-gray-600 dark:text-gray-400">

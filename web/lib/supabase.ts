@@ -15,6 +15,17 @@ export interface App {
   platform: 'ios' | 'android'
   bundle_id: string
   is_active: boolean
+  credential_id: number | null
+  created_at: string
+  updated_at: string
+}
+
+export interface Credential {
+  id: number
+  name: string
+  platform: 'ios' | 'android'
+  config_encrypted: string
+  is_active: boolean
   created_at: string
   updated_at: string
 }
