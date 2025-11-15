@@ -11,9 +11,13 @@ import {
   Chip,
   Spinner,
   Button,
+  useDisclosure,
 } from '@heroui/react'
 import { supabase, type AlertRule } from '@/lib/supabase'
 import Link from 'next/link'
+import { useAuth } from '@/lib/auth'
+import { AdminOnly } from '@/components/AdminOnly'
+import { AlertRuleModal } from '@/components/AlertRuleModal'
 
 interface AlertRuleWithApp extends AlertRule {
   apps?: {
@@ -36,9 +40,12 @@ const COMPARISON_DISPLAY: Record<string, string> = {
 }
 
 export default function RulesPage() {
+  const { user } = useAuth()
   const [rules, setRules] = useState<AlertRuleWithApp[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedRule, setSelectedRule] = useState<AlertRule | null>(null)
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
   useEffect(() => {
     fetchRules()
@@ -64,6 +71,49 @@ export default function RulesPage() {
     }
   }
 
+  const handleAdd = () => {
+    setSelectedRule(null)
+    onOpen()
+  }
+
+  const handleEdit = (rule: AlertRule) => {
+    setSelectedRule(rule)
+    onOpen()
+  }
+
+  const handleDelete = async (rule: AlertRule) => {
+    if (!confirm('确定要删除此告警规则吗？此操作不可撤销。')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('alert_rules')
+        .delete()
+        .eq('id', rule.id)
+
+      if (error) throw error
+
+      alert('删除成功！')
+      fetchRules()
+    } catch (err) {
+      alert(`删除失败：${err instanceof Error ? err.message : '未知错误'}`)
+    }
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen p-8 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">请先登录</h2>
+          <Button as={Link} href="/login" color="primary">
+            前往登录
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
@@ -78,9 +128,11 @@ export default function RulesPage() {
             <Button as={Link} href="/" color="default" variant="flat">
               返回首页
             </Button>
-            <Button color="primary">
-              + 添加规则
-            </Button>
+            <AdminOnly>
+              <Button color="primary" onPress={handleAdd}>
+                + 添加规则
+              </Button>
+            </AdminOnly>
           </div>
         </div>
 
@@ -141,7 +193,8 @@ export default function RulesPage() {
                         <div>
                           <span className="text-gray-500">最小:</span>{' '}
                           <span className="font-mono">
-                            {rule.threshold_min}%
+                            {rule.threshold_min}
+                            {rule.comparison_type !== 'absolute' && '%'}
                           </span>
                         </div>
                       )}
@@ -149,7 +202,8 @@ export default function RulesPage() {
                         <div>
                           <span className="text-gray-500">最大:</span>{' '}
                           <span className="font-mono">
-                            {rule.threshold_max}%
+                            {rule.threshold_max}
+                            {rule.comparison_type !== 'absolute' && '%'}
                           </span>
                         </div>
                       )}
@@ -180,14 +234,31 @@ export default function RulesPage() {
                     </Chip>
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="flat">
-                        编辑
-                      </Button>
-                      <Button size="sm" color="danger" variant="flat">
-                        删除
-                      </Button>
-                    </div>
+                    <AdminOnly
+                      fallback={
+                        <span className="text-sm text-gray-500">
+                          仅管理员可操作
+                        </span>
+                      }
+                    >
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="flat"
+                          onPress={() => handleEdit(rule)}
+                        >
+                          编辑
+                        </Button>
+                        <Button
+                          size="sm"
+                          color="danger"
+                          variant="flat"
+                          onPress={() => handleDelete(rule)}
+                        >
+                          删除
+                        </Button>
+                      </div>
+                    </AdminOnly>
                   </TableCell>
                 </TableRow>
               ))}
@@ -237,6 +308,13 @@ export default function RulesPage() {
           </div>
         </div>
       </div>
+
+      <AlertRuleModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onSuccess={fetchRules}
+        rule={selectedRule}
+      />
     </div>
   )
 }

@@ -11,14 +11,21 @@ import {
   Button,
   Chip,
   Spinner,
+  useDisclosure,
 } from '@heroui/react'
 import { supabase, type App } from '@/lib/supabase'
 import Link from 'next/link'
+import { useAuth } from '@/lib/auth'
+import { AdminOnly } from '@/components/AdminOnly'
+import { AppModal } from '@/components/AppModal'
 
 export default function AppsPage() {
+  const { user } = useAuth()
   const [apps, setApps] = useState<App[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedApp, setSelectedApp] = useState<App | null>(null)
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
   useEffect(() => {
     fetchApps()
@@ -41,6 +48,50 @@ export default function AppsPage() {
     }
   }
 
+  const handleAdd = () => {
+    setSelectedApp(null)
+    onOpen()
+  }
+
+  const handleEdit = (app: App) => {
+    setSelectedApp(app)
+    onOpen()
+  }
+
+  const handleDelete = async (app: App) => {
+    if (!confirm(`确定要删除应用 "${app.name}" 吗？此操作不可撤销。`)) {
+      return
+    }
+
+    try {
+      const { error } = await supabase.from('apps').delete().eq('id', app.id)
+
+      if (error) throw error
+
+      alert('删除成功！')
+      fetchApps()
+    } catch (err) {
+      alert(`删除失败：${err instanceof Error ? err.message : '未知错误'}`)
+    }
+  }
+
+  const handleModalSuccess = () => {
+    fetchApps()
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen p-8 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">请先登录</h2>
+          <Button as={Link} href="/login" color="primary">
+            前往登录
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
@@ -55,9 +106,11 @@ export default function AppsPage() {
             <Button as={Link} href="/" color="default" variant="flat">
               返回首页
             </Button>
-            <Button color="primary">
-              + 添加应用
-            </Button>
+            <AdminOnly>
+              <Button color="primary" onPress={handleAdd}>
+                + 添加应用
+              </Button>
+            </AdminOnly>
           </div>
         </div>
 
@@ -91,7 +144,7 @@ export default function AppsPage() {
                       variant="flat"
                       size="sm"
                     >
-                      {app.platform === 'ios' ? 'iOS' : 'Android'}
+                      {app.platform === 'ios' ? '🍎 iOS' : '🤖 Android'}
                     </Chip>
                   </TableCell>
                   <TableCell className="font-mono text-sm">
@@ -110,14 +163,31 @@ export default function AppsPage() {
                     {new Date(app.created_at).toLocaleDateString('zh-CN')}
                   </TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="flat">
-                        编辑
-                      </Button>
-                      <Button size="sm" color="danger" variant="flat">
-                        删除
-                      </Button>
-                    </div>
+                    <AdminOnly
+                      fallback={
+                        <span className="text-sm text-gray-500">
+                          仅管理员可操作
+                        </span>
+                      }
+                    >
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="flat"
+                          onPress={() => handleEdit(app)}
+                        >
+                          编辑
+                        </Button>
+                        <Button
+                          size="sm"
+                          color="danger"
+                          variant="flat"
+                          onPress={() => handleDelete(app)}
+                        >
+                          删除
+                        </Button>
+                      </div>
+                    </AdminOnly>
                   </TableCell>
                 </TableRow>
               ))}
@@ -125,6 +195,13 @@ export default function AppsPage() {
           </Table>
         )}
       </div>
+
+      <AppModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onSuccess={handleModalSuccess}
+        app={selectedApp}
+      />
     </div>
   )
 }

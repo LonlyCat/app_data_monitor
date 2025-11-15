@@ -13,9 +13,13 @@ import {
   Button,
   Card,
   CardBody,
+  useDisclosure,
 } from '@heroui/react'
 import { supabase, type DailyReportConfig } from '@/lib/supabase'
 import Link from 'next/link'
+import { useAuth } from '@/lib/auth'
+import { AdminOnly } from '@/components/AdminOnly'
+import { ReportConfigModal } from '@/components/ReportConfigModal'
 
 interface DailyReportConfigWithApp extends DailyReportConfig {
   apps?: {
@@ -25,11 +29,16 @@ interface DailyReportConfigWithApp extends DailyReportConfig {
 }
 
 export default function ReportsPage() {
+  const { user } = useAuth()
   const [configs, setConfigs] = useState<DailyReportConfigWithApp[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedConfig, setSelectedConfig] = useState<DailyReportConfig | null>(
+    null
+  )
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
-  useEffect() => {
+  useEffect(() => {
     fetchConfigs()
   }, [])
 
@@ -53,6 +62,49 @@ export default function ReportsPage() {
     }
   }
 
+  const handleAdd = () => {
+    setSelectedConfig(null)
+    onOpen()
+  }
+
+  const handleEdit = (config: DailyReportConfig) => {
+    setSelectedConfig(config)
+    onOpen()
+  }
+
+  const handleDelete = async (config: DailyReportConfig) => {
+    if (!confirm('确定要删除此日报配置吗？此操作不可撤销。')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('daily_report_configs')
+        .delete()
+        .eq('id', config.id)
+
+      if (error) throw error
+
+      alert('删除成功！')
+      fetchConfigs()
+    } catch (err) {
+      alert(`删除失败：${err instanceof Error ? err.message : '未知错误'}`)
+    }
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen p-8 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">请先登录</h2>
+          <Button as={Link} href="/login" color="primary">
+            前往登录
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
@@ -67,9 +119,11 @@ export default function ReportsPage() {
             <Button as={Link} href="/" color="default" variant="flat">
               返回首页
             </Button>
-            <Button color="primary">
-              + 添加配置
-            </Button>
+            <AdminOnly>
+              <Button color="primary" onPress={handleAdd}>
+                + 添加配置
+              </Button>
+            </AdminOnly>
           </div>
         </div>
 
@@ -142,17 +196,31 @@ export default function ReportsPage() {
                       {new Date(config.created_at).toLocaleDateString('zh-CN')}
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="flat">
-                          编辑
-                        </Button>
-                        <Button size="sm" color="secondary" variant="flat">
-                          测试
-                        </Button>
-                        <Button size="sm" color="danger" variant="flat">
-                          删除
-                        </Button>
-                      </div>
+                      <AdminOnly
+                        fallback={
+                          <span className="text-sm text-gray-500">
+                            仅管理员可操作
+                          </span>
+                        }
+                      >
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            onPress={() => handleEdit(config)}
+                          >
+                            编辑
+                          </Button>
+                          <Button
+                            size="sm"
+                            color="danger"
+                            variant="flat"
+                            onPress={() => handleDelete(config)}
+                          >
+                            删除
+                          </Button>
+                        </div>
+                      </AdminOnly>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -200,6 +268,13 @@ export default function ReportsPage() {
           </>
         )}
       </div>
+
+      <ReportConfigModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onSuccess={fetchConfigs}
+        config={selectedConfig}
+      />
     </div>
   )
 }
