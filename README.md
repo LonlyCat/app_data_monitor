@@ -1,6 +1,6 @@
 # App数据监控与分析平台
 
-一个自动化的App数据监控系统，支持从Apple App Store Connect和Google Play Console自动采集数据，进行智能分析和异常告警，并通过Lark(飞书)发送通知。系统采用集成式任务调度架构，提供完整的Web管理界面和自动化执行能力。
+一个自动化的App数据监控系统，支持从Apple App Store Connect和Google Play Console自动采集数据，进行智能分析和异常告警，并通过Lark(飞书)发送通知。系统采用Supabase + Next.js架构，提供现代化的Web界面和自动化执行能力。
 
 ## 🚀 功能特性
 
@@ -9,14 +9,13 @@
 - 📊 **智能数据分析**: 自动计算环比、同比增长率和趋势分析
 - ⚠️ **异常检测告警**: 基于阈值规则的实时异常检测
 - 📱 **Lark集成**: 丰富的卡片消息格式，支持日报和告警通知
-- 🛠️ **管理后台**: 基于Django Admin的友好配置界面，支持任务调度管理
-- ⏰ **集成调度器**: 内置任务调度系统，支持定时触发、手动执行、重试机制
-- 📈 **执行监控**: 实时查看任务执行状态、历史记录和性能指标
-- 🔐 **安全加密**: 敏感凭证加密存储
+- 🛠️ **现代化界面**: 基于Next.js 14和HeroUI的响应式Web界面
+- ⏰ **自动调度**: Supabase Edge Functions和Scheduled Functions实现定时任务
+- 🔐 **安全性**: Row Level Security (RLS) 和安全的API密钥管理
 
 ### 监控指标
 - 📱 新增下载量 (日环比、周同比)
-- 👥 活跃会话数 (日环比、周同比)  
+- 👥 活跃会话数 (日环比、周同比)
 - 💰 收入数据 (日环比、周同比)
 - ⭐ 应用评分变化
 
@@ -24,29 +23,30 @@
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Django Admin  │    │  集成任务调度器   │    │   Apple/Google  │
-│  - 应用配置管理   │    │  - 定时触发      │    │      APIs      │
-│  - 任务调度配置   │    │  - 手动触发      │    │                 │
-│  - 执行历史监控   │    │  - 重试机制      │    │                 │
+│   Next.js Web   │    │     Supabase    │    │   Apple/Google  │
+│   - 数据展示     │◄───┤  - PostgreSQL   │◄───┤      APIs      │
+│   - 配置管理     │    │  - Edge Funcs   │    │                 │
+│   - HeroUI      │    │  - Scheduled    │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   PostgreSQL    │◄───┤  数据采集分析引擎  ├───►│   Lark 通知     │
-│  - 配置存储      │    │  - 数据采集      │    │  - 日报推送     │
-│  - 调度配置      │    │  - 智能分析      │    │  - 异常告警     │
-│  - 执行历史      │    │  - 异常检测      │    │  - 富文本卡片   │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │
+                              ▼
+                       ┌─────────────────┐
+                       │   Lark 通知     │
+                       │  - 日报推送     │
+                       │  - 异常告警     │
+                       │  - 富文本卡片   │
+                       └─────────────────┘
 ```
 
 ## 🛠️ 技术栈
 
-- **后端**: Django 4.2 + PostgreSQL
-- **数据分析**: pandas + 自研分析引擎
+- **前端**: Next.js 14 (App Router) + React 18 + TypeScript
+- **UI框架**: HeroUI 2.7.11 + Tailwind CSS 3.x
+- **后端**: Supabase (PostgreSQL + Edge Functions + Scheduled Functions)
+- **数据分析**: Edge Functions (Deno/TypeScript)
 - **API集成**: Apple App Store Connect API + Google Play Console API
 - **通知**: Lark (飞书) Webhook API
-- **部署**: Docker + Docker Compose
-- **任务调度**: 集成式Django调度器 + APScheduler (可选)
+- **包管理**: pnpm
 
 ## 📦 快速开始
 
@@ -57,465 +57,280 @@
 git clone <repository-url>
 cd app_data_monitor
 
-# 复制环境变量文件
-cp .env.example .env
+# 安装Supabase CLI
+brew install supabase/tap/supabase  # macOS
+# 或参考: https://supabase.com/docs/guides/cli/getting-started
+
+# 安装pnpm
+npm install -g pnpm
 ```
 
-### 2. 配置环境变量
-
-编辑 `.env` 文件：
+### 2. 启动Supabase本地开发环境
 
 ```bash
-# Django配置
-DEBUG=True
-SECRET_KEY=your-secret-key-here
-ALLOWED_HOSTS=localhost,127.0.0.1
+# 启动Supabase本地服务
+supabase start
 
-# 数据库配置
-DB_NAME=app_monitor
-DB_USER=postgres
-DB_PASSWORD=your-password
-DB_HOST=localhost
-DB_PORT=5432
-
-# 加密密钥 (用于敏感数据加密)
-ENCRYPTION_KEY=your-encryption-key-here
-
-# 数据拉取延迟天数 (默认为2, 用于等待API数据稳定)
-DATA_FETCH_DELAY_DAYS=2
+# 获取API密钥（首次启动后会显示）
+# NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbG...
 ```
 
-### 3. 启动系统
-
-#### 开发环境（推荐用于开发调试）
-```bash
-# 使用SQLite数据库，无需安装PostgreSQL
-./start_dev.sh
-```
-
-#### 生产环境（推荐用于生产部署）
-```bash
-# 使用Docker + PostgreSQL
-./start_prod.sh
-
-# 或手动启动
-docker-compose up -d
-sleep 15  # 等待数据库启动
-./init_db.sh  # 初始化数据库
-docker-compose exec web python manage.py createsuperuser
-```
-
-### 4. 故障排除
-
-如果遇到数据库相关错误 (如 "relation does not exist")：
+### 3. 配置Next.js环境变量
 
 ```bash
-# 运行快速修复脚本
-./quick_fix.sh
+# 进入web目录
+cd web
 
-# 或手动修复
-docker-compose down --volumes
-docker-compose up -d db
-sleep 20
-docker-compose up -d web
-docker-compose exec web python manage.py migrate
+# 复制环境变量示例文件
+cp .env.local.example .env.local
+
+# 编辑.env.local，填入Supabase提供的URL和密钥
 ```
 
-### 5. 访问管理后台
+`.env.local` 文件内容：
+```bash
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-访问 http://localhost:8000/admin 使用创建的超级用户账号登录。
-
-## 📝 配置指南
-
-### 1. 添加App
-
-在管理后台 "Apps" 部分添加要监控的应用：
-- App名称
-- 平台 (iOS/Android)
-- Bundle ID / Package Name
-
-### 2. 配置API凭证
-
-#### Apple App Store Connect
-1. 在管理后台 "平台凭证" 部分添加iOS凭证
-2. 填入以下信息：
-   - Issuer ID
-   - Key ID  
-   - Private Key (完整的私钥内容)
-
-#### Google Play Console
-1. 在管理后台 "平台凭证" 部分添加Android凭证
-2. 填入以下信息：
-   - Service Account Email
-   - Service Account Key (JSON格式)
-   - GCS Bucket Name（形如 `pubsite_prod_rev_*`，例如 `pubsite_prod_rev_11858034368235982812`）
-   - GCS Project ID（可选）
-
-说明：系统会使用上述 GCS 配置从 `stats/installs/installs_{package}_{YYYYMM}*overview.csv` 下载当月安装概览报表，并按每日提取 `Daily User Installs` 作为新增下载量，`Daily User Uninstalls` 作为卸载量。
-
-### 3. 设置告警规则
-
-为每个App配置告警规则：
-- 选择监控指标 (下载量、会话数、收入等)
-- 设置比较类型 (日环比、周同比、绝对值)
-- 配置阈值范围
-- 设置告警Webhook地址
-
-### 4. 配置日报
-
-为每个App配置日报设置：
-- 日报通知Webhook地址
-- Lark表格ID (可选，用于数据存储)
-
-### 5. 设置任务调度
-
-在管理后台 "任务调度" 部分配置自动化任务：
-- 任务名称和类型 (数据采集、完整分析等)
-- 执行频率 (每日、每周、每月)
-- 执行时间 (小时、分钟)
-- 关联App (可选，不指定则对所有App执行)
-- 重试机制和超时设置
-
-## 🔧 管理命令
-
-### 执行数据采集任务
+### 4. 安装依赖并启动Web应用
 
 ```bash
-# 运行完整的每日任务
-python manage.py run_daily_task
+# 安装依赖
+pnpm install
 
-# 指定特定App
-python manage.py run_daily_task --app-id 1
-
-# 指定日期
-python manage.py run_daily_task --date 2023-12-01
-
-# 试运行模式
-python manage.py run_daily_task --dry-run
-
-# 跳过通知发送
-python manage.py run_daily_task --skip-notifications
+# 启动开发服务器
+pnpm dev
 ```
 
-### 测试Webhook连接
+访问 http://localhost:3000 查看应用。
+
+## 📝 数据库结构
+
+主要数据表（位于 `supabase/migrations/`）：
+
+- `apps`: 应用信息
+- `credentials`: API凭证（加密存储）
+- `alert_rules`: 告警规则配置
+- `daily_report_configs`: 日报配置
+- `data_records`: 每日数据记录
+- `alert_logs`: 告警日志
+- `task_schedules`: 任务调度配置
+- `task_executions`: 任务执行历史
+
+## 🔧 Supabase Edge Functions
+
+Edge Functions位于 `supabase/functions/`：
+
+- `collect-daily-data`: 数据采集主函数
+- `apple-api-client`: Apple App Store Connect API集成
+- `google-api-client`: Google Play Console API集成
+- `send-lark-notification`: Lark通知发送
+
+### 部署Edge Functions
 
 ```bash
-# 测试所有配置的Webhook
-python manage.py test_webhook --test-all
+# 部署所有函数
+supabase functions deploy
 
-# 测试特定App的Webhook
-python manage.py test_webhook --app-id 1
+# 部署特定函数
+supabase functions deploy collect-daily-data
 
-# 测试指定URL
-python manage.py test_webhook --webhook-url https://your-webhook-url
-
-# 测试API客户端连接
-python manage.py test_api_clients --mock-data
-
-# 测试真实API连接
-python manage.py test_api_clients --app-id 1
+# 查看函数日志
+supabase functions logs collect-daily-data
 ```
 
-### 生成测试数据
+## ⏰ 任务调度
+
+使用Supabase Scheduled Functions（基于pg_cron）：
+
+```sql
+-- 每天早上2点执行数据采集
+SELECT cron.schedule(
+  'collect-daily-data',
+  '0 2 * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://your-project.supabase.co/functions/v1/collect-daily-data',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer YOUR_ANON_KEY"}'::jsonb
+  );
+  $$
+);
+```
+
+参考 `supabase/migrations/` 中的迁移文件进行配置。
+
+## 🔍 开发指南
+
+### Web应用开发
 
 ```bash
-# 生成30天的示例数据
-python manage.py generate_sample_data
+cd web
 
-# 生成包含异常的数据
-python manage.py generate_sample_data --with-anomalies
+# 开发模式
+pnpm dev
 
-# 为特定App生成数据
-python manage.py generate_sample_data --app-id 1 --days 60
+# 构建生产版本
+pnpm build
+
+# 启动生产服务器
+pnpm start
+
+# 代码检查
+pnpm lint
 ```
 
-### 任务调度管理
-
-#### 一键初始化（推荐在 VPC 上使用）
-
-使用脚本 `./setup_scheduler_tick.sh` 快速安装每分钟一次的 tick（无常驻、低资源占用）：
+### Supabase本地开发
 
 ```bash
-# 为当前用户安装 cron，每分钟执行一次
-./setup_scheduler_tick.sh
+# 查看Supabase状态
+supabase status
 
-# 加上开机自启（@reboot 先启动 compose 堆栈）
-./setup_scheduler_tick.sh --with-reboot
+# 停止Supabase服务
+supabase stop
 
-# 指定项目路径/compose 文件/项目名（可选）
-./setup_scheduler_tick.sh \
-  --project-dir /path/to/app_data_monitor \
-  --compose-file docker-compose.release.yml \
-  --project-name app_data_monitor
+# 重置数据库
+supabase db reset
 
-# 使用 systemd timer 安装（需 root，重启更稳健）
-sudo ./setup_scheduler_tick.sh --systemd
+# 创建新迁移
+supabase migration new migration_name
 
-# 卸载
-./setup_scheduler_tick.sh --remove               # 移除 cron
-sudo ./setup_scheduler_tick.sh --systemd --remove # 移除 systemd timer
+# 应用迁移
+supabase db push
 ```
 
-说明：
-- 脚本默认在每次执行前 `sleep 10` 秒，帮助等待容器就绪；可用 `--delay` 调整。
-- 脚本会将日志写入 `logs/scheduler-cron.log`。
-
-#### 方法零：无常驻 Tick（低资源环境强烈推荐）
-
-通过一次性管理命令 `scheduler_tick` 每分钟触发，避免在低配实例（如 GCP e2-micro）上常驻调度器造成的 CPU 飙升。
-
-1) 主机上配置 cron（按你的路径/项目名调整）：
-```bash
-* * * * * cd /Users/bingsen/Documents/Project/Works/app_data_monitor && \
-  docker compose -f docker-compose.release.yml -p app_data_monitor exec -T web \
-  python manage.py scheduler_tick >> logs/scheduler-cron.log 2>&1
-```
-
-2) 首次创建日志目录：
-```bash
-mkdir -p logs && touch logs/scheduler-cron.log
-```
-
-3) 验证（干跑预览）：
-```bash
-docker compose -f docker-compose.release.yml -p app_data_monitor exec -T web \
-  python manage.py scheduler_tick --dry-run
-```
-
-说明：
-- `scheduler_tick` 会在当前分钟筛选匹配 `TaskSchedule(hour, minute)` 的调度，并按 `daily/weekly/monthly` 判定；
-- 自带文件锁，避免并发；若上一次尚未结束，本次会自动跳过；
-- 采用该方式后，无需再使用 `start_scheduler.sh` 或 `manage_scheduler start` 的常驻模式。
-
-#### 方法一：后台守护进程（不推荐用于低配机器）
+### 测试Edge Functions
 
 ```bash
-# 启动任务调度器到后台
-./start_scheduler.sh
+# 本地调用函数
+supabase functions serve
 
-# 停止任务调度器
-./stop_scheduler.sh
-
-# 查看调度器状态
-./scheduler_status.sh
-
-# 查看实时日志
-tail -f logs/scheduler.log
+# 使用curl测试
+curl -i --location --request POST \
+  'http://127.0.0.1:54321/functions/v1/collect-daily-data' \
+  --header 'Authorization: Bearer YOUR_ANON_KEY' \
+  --header 'Content-Type: application/json' \
+  --data '{"date": "2025-11-15"}'
 ```
 
-#### 方法二：前台运行（调试用）
+## 🚀 生产部署
+
+### 1. 部署到Supabase
 
 ```bash
-# 启动任务调度器 (前台模式，会占用终端)
-docker compose exec web python manage.py manage_scheduler start --daemon
+# 登录Supabase CLI
+supabase login
 
-# 停止任务调度器
-docker compose exec web python manage.py manage_scheduler stop
+# 关联到你的Supabase项目
+supabase link --project-ref your-project-ref
 
-# 查看调度器状态
-docker compose exec web python manage.py manage_scheduler status
+# 推送数据库迁移
+supabase db push
 
-# 测试调度器逻辑
-docker compose exec web python manage.py manage_scheduler test
-
-# 测试特定调度
-docker compose exec web python manage.py manage_scheduler test --test-schedule-id 1
+# 部署Edge Functions
+supabase functions deploy
 ```
 
-### 手动执行任务
+### 2. 部署Next.js应用
+
+推荐使用Vercel部署Next.js应用：
 
 ```bash
-# 查看所有可用的任务调度
-python manage.py execute_task --list-schedules
+cd web
 
-# 查看所有可用的App
-python manage.py execute_task --list-apps
+# 安装Vercel CLI
+npm i -g vercel
 
-# 执行特定的任务调度
-python manage.py execute_task --schedule-id 1
+# 部署
+vercel
 
-# 执行特定App的任务
-python manage.py execute_task --app-id 1
-
-# 指定日期执行任务
-python manage.py execute_task --app-id 1 --date 2023-12-01
-
-# 跳过通知的执行
-python manage.py execute_task --skip-notifications
+# 生产部署
+vercel --prod
 ```
 
-## ⏰ 任务调度设置
+或使用其他平台（Netlify、Railway等）。
 
-### 方法零：无常驻 Tick（低资源推荐）
+### 3. 配置环境变量
 
-无需常驻进程，使用系统 cron 每分钟触发一次：
+在部署平台设置以下环境变量：
+- `NEXT_PUBLIC_SUPABASE_URL`: 你的Supabase项目URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Supabase匿名密钥
 
-```bash
-* * * * * cd /Users/bingsen/Documents/Project/Works/app_data_monitor && \
-  docker compose -f docker-compose.release.yml -p app_data_monitor exec -T web \
-  python manage.py scheduler_tick >> logs/scheduler-cron.log 2>&1
-```
+## 🔐 安全配置
 
-优点：极低资源占用、无多实例隐患；建议在 e2-micro 等突发型实例优先使用。
+### Row Level Security (RLS)
 
-### 方法一: 集成调度器（常驻）
+数据库已启用RLS策略，确保数据安全。参考 `supabase/migrations/` 中的RLS配置。
 
-使用内置的任务调度系统，无需配置系统Cron Jobs：
+### API密钥管理
 
-1. **创建任务调度**: 在Django Admin → 任务调度 → 添加任务调度
-2. **配置执行时间**: 设置频率、小时、分钟等参数
-3. **启动调度器**:
-   ```bash
-   # 启动调度器 (守护进程模式)
-   python manage.py manage_scheduler start --daemon
-   
-   # 或在Docker环境中
-   docker-compose exec web python manage.py manage_scheduler start --daemon
+- 凭证信息加密存储在数据库中
+- 使用Supabase的安全存储功能
+- 生产环境请使用强加密密钥
+
+## 📊 HeroUI配置要点
+
+根据本项目的配置经验，正确使用HeroUI需要：
+
+1. **安装依赖**：
+   ```json
+   {
+     "dependencies": {
+       "@heroui/react": "2.7.11"
+     },
+     "devDependencies": {
+       "@heroui/theme": "^2.0.0"
+     }
+   }
    ```
-4. **监控执行**: 在Django Admin → 任务执行记录 中查看执行状态
 
-### 方法二: 传统Cron Jobs (向后兼容)
+2. **Tailwind配置** (`tailwind.config.ts`)：
+   ```typescript
+   import { heroui } from '@heroui/theme' // 从 @heroui/theme 导入，而非 @heroui/react!
 
-如需使用传统Cron Jobs，参考 `crontab.example` 文件：
+   export default {
+     plugins: [heroui({ /* theme config */ })]
+   }
+   ```
 
-```bash
-# 复制示例文件
-cp crontab.example /etc/cron.d/app_monitor
+3. **主题配置**：确保在layout中使用 `className="dark"` 和主题工具类 `bg-background text-foreground`
 
-# 编辑定时任务
-sudo crontab -e
+详见 `web/tailwind.config.ts` 和 `web/app/layout.tsx`。
 
-# 添加以下行（调整路径）
-0 2 * * * cd /path/to/app_data_monitor && python manage.py run_daily_task
+## 📄 文档
 
-# 启动调度器 (推荐同时使用)
-@reboot cd /path/to/app_data_monitor && python manage.py manage_scheduler start --daemon
-```
-
-## 📊 API和数据格式
-
-### Lark通知格式
-
-系统会发送两种类型的通知：
-
-#### 1. 日报通知
-包含当日数据概览、增长率分析和数据洞察
-
-#### 2. 异常告警
-包含异常详情、触发条件和严重程度
-
-### 数据模型
-
-主要数据表：
-- `App`: 应用信息
-- `Credential`: API凭证 (加密存储)
-- `AlertRule`: 告警规则配置
-- `DailyReportConfig`: 日报配置
-- `DataRecord`: 每日数据记录
-- `AlertLog`: 告警日志
-- `TaskSchedule`: 任务调度配置
-- `TaskExecution`: 任务执行历史记录
+- [项目架构文档](doc/project_architecture.md) - 系统架构和设计模式（待更新）
 
 ## 🔍 故障排除
 
-### 常见问题
+### Supabase CLI问题
 
-1. **API连接失败**
-   - 检查凭证配置是否正确
-   - 确认API权限设置
-   - 查看日志获取详细错误信息
+如遇到配置验证错误，检查 `supabase/config.toml`：
+- `ip_version` 必须是 "IPv4" 或 "IPv6"（大小写敏感）
+- 移除已弃用的 `port` 和 `edge_functions` 配置
 
-2. **Lark通知发送失败**
-   - 验证Webhook URL是否有效
-   - 使用 `test_webhook` 命令进行连接测试
-   - 检查网络连接
+### 模块解析错误
 
-3. **数据异常**
-   - 使用 `--dry-run` 模式调试
-   - 检查告警规则阈值设置
-   - 查看原始API响应数据
+如遇到 `Module not found: '@/lib/supabase'`：
+1. 确认 `web/lib/` 目录未被 `.gitignore` 忽略
+2. 清除Next.js缓存：`rm -rf web/.next`
+3. 重新安装依赖：`pnpm install`
 
-4. **任务调度问题**
-   - 检查调度器运行状态: `python manage.py manage_scheduler status`
-   - 查看任务执行历史记录
-   - 检查任务调度配置是否正确
-   - 使用手动触发测试: `python manage.py execute_task --schedule-id 1`
+### HeroUI样式不生效
 
-### 日志查看
-
-```bash
-# 查看应用日志
-docker-compose logs -f web
-
-# 查看定时任务日志  
-tail -f /var/log/app_monitor/daily_task.log
-
-# 查看调度器状态和执行日志
-python manage.py manage_scheduler status
-
-# 在Django Admin中查看详细的任务执行日志
-# 访问: http://localhost:8000/admin → 任务执行记录
-```
-
-## 🚀 部署到生产环境
-
-### 环境变量配置
-- 设置 `DEBUG=False`
-- 配置安全的 `SECRET_KEY`
-- 使用强密码和加密密钥
-- 设置正确的 `ALLOWED_HOSTS`
-
-### 安全建议
-- 使用HTTPS
-- 定期更新依赖包
-- 监控系统资源使用
-- 定期备份数据库
-
-### 无代码部署（基于预构建镜像）
-
-不在服务器拉取源代码，直接拉取容器镜像并运行。
-
-- 方案概览：
-  - 在 CI 或本地将镜像构建并推送至镜像仓库（Docker Hub/自建/GHCR）。
-  - 在线上服务器仅保留 `docker-compose.release.yml` 和 `.env.release`，通过镜像启动。
-
-- 步骤：
-  1) 本地/CI 构建并推送镜像（示例）：
-     ```bash
-     docker build -t docker.io/yourrepo/app-data-monitor:1.0.0 .
-     docker push docker.io/yourrepo/app-data-monitor:1.0.0
-     ```
-  2) 线上服务器准备环境：
-     ```bash
-     # 准备环境变量
-     cp .env.release.example .env.release
-     # 编辑 .env.release，设置 SECRET_KEY、ALLOWED_HOSTS、ENCRYPTION_KEY 等
-     ```
-  3) 启动（无需源代码，指定镜像即可）：
-     ```bash
-     ./start_release.sh --image docker.io/yourrepo/app-data-monitor:1.0.0
-     ```
-
-- 说明：
-  - `docker-compose.release.yml` 的 `web` 服务使用预构建镜像（通过 `WEB_IMAGE` 指定）。
-  - 容器入口脚本会在启动时自动执行迁移和收集静态文件；如需自动创建管理员，
-    可在 `.env.release` 中设置 `DJANGO_SUPERUSER_USERNAME` 与 `DJANGO_SUPERUSER_PASSWORD`。
-  - 本项目默认通过 Django `runserver` 在容器中对外提供 8000 端口（便于与当前方案保持一致）。
-    如需改为 Gunicorn/Nginx 等更适合生产的方式，可在镜像/Compose 中调整。
+确保：
+1. 从 `@heroui/theme` 导入 `heroui` 插件（不是从 `@heroui/react`）
+2. `@heroui/theme` 已安装在 `devDependencies`
+3. Tailwind content配置包含 HeroUI 主题路径
 
 ## 📄 许可证
 
-本项目采用 MIT 许可证。详见 LICENSE 文件。
+本项目采用 MIT 许可证。
 
 ## 🤝 贡献指南
 
 欢迎提交Issue和Pull Request来改进项目！
-
-## 📞 技术支持
-
-如有问题，请通过以下方式联系：
-- 提交GitHub Issue
-- 发送邮件到项目维护者
 
 ---
 
