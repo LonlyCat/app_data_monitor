@@ -87,6 +87,20 @@ export default function Home() {
 
           <Card>
             <CardHeader className="pb-2">
+              <h3 className="text-xl font-semibold">📊 日报配置</h3>
+            </CardHeader>
+            <CardBody>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                配置应用的日报通知和数据导出
+              </p>
+              <Button as={Link} href="/reports" color="primary">
+                进入日报配置
+              </Button>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
               <h3 className="text-xl font-semibold">📝 执行记录</h3>
             </CardHeader>
             <CardBody>
